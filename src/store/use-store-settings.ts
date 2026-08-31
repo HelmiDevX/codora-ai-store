@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { 
   fetchStoreSettingsFromSupabase, 
   upsertStoreSettingsToSupabase, 
@@ -59,104 +58,103 @@ const DEFAULT_SETTINGS: StoreSettings = {
 interface StoreSettingsState extends StoreSettings {
   isLoading: boolean;
   fetchInitialData: () => Promise<void>;
-  updateSettings: (newSettings: Partial<StoreSettings>) => Promise<void>;
-  updatePaymentAccounts: (accounts: Partial<StoreSettings['paymentAccounts']>) => Promise<void>;
+  updateSettings: (newSettings: Partial<StoreSettings>) => Promise<{ success: boolean; error?: string }>;
+  updatePaymentAccounts: (accounts: Partial<StoreSettings['paymentAccounts']>) => Promise<{ success: boolean; error?: string }>;
   resetToDefaults: () => void;
 }
 
 let isSettingsSubscribed = false;
 
-export const useStoreSettings = create<StoreSettingsState>()(
-  persist(
-    (set, get) => ({
-      ...DEFAULT_SETTINGS,
-      isLoading: false,
+export const useStoreSettings = create<StoreSettingsState>()((set, get) => ({
+  ...DEFAULT_SETTINGS,
+  isLoading: true,
 
-      fetchInitialData: async () => {
-        set({ isLoading: true });
-        try {
-          const liveSettings = await fetchStoreSettingsFromSupabase();
-          if (liveSettings) {
+  fetchInitialData: async () => {
+    set({ isLoading: true });
+    try {
+      const liveSettings = await fetchStoreSettingsFromSupabase();
+      if (liveSettings) {
+        set({
+          whatsappNumber: liveSettings.whatsappNumber || get().whatsappNumber,
+          telegramUsername: liveSettings.telegramUsername || get().telegramUsername,
+          instagramUsername: liveSettings.instagramUsername || get().instagramUsername,
+          adminPin: liveSettings.adminPin || get().adminPin,
+          paymentAccounts: {
+            ...get().paymentAccounts,
+            ...(liveSettings.paymentAccounts || {}),
+          },
+          isLoading: false,
+        });
+      } else {
+        set({ isLoading: false });
+      }
+
+      if (!isSettingsSubscribed && typeof window !== 'undefined') {
+        isSettingsSubscribed = true;
+        subscribeToSupabaseChanges('store_settings', async () => {
+          const refreshed = await fetchStoreSettingsFromSupabase();
+          if (refreshed) {
             set({
-              whatsappNumber: liveSettings.whatsappNumber || get().whatsappNumber,
-              telegramUsername: liveSettings.telegramUsername || get().telegramUsername,
-              instagramUsername: liveSettings.instagramUsername || get().instagramUsername,
-              adminPin: liveSettings.adminPin || get().adminPin,
+              whatsappNumber: refreshed.whatsappNumber || get().whatsappNumber,
+              telegramUsername: refreshed.telegramUsername || get().telegramUsername,
+              instagramUsername: refreshed.instagramUsername || get().instagramUsername,
+              adminPin: refreshed.adminPin || get().adminPin,
               paymentAccounts: {
                 ...get().paymentAccounts,
-                ...(liveSettings.paymentAccounts || {}),
+                ...(refreshed.paymentAccounts || {}),
               },
-              isLoading: false,
-            });
-          } else {
-            set({ isLoading: false });
-          }
-
-          if (!isSettingsSubscribed && typeof window !== 'undefined') {
-            isSettingsSubscribed = true;
-            subscribeToSupabaseChanges('store_settings', async () => {
-              const refreshed = await fetchStoreSettingsFromSupabase();
-              if (refreshed) {
-                set({
-                  whatsappNumber: refreshed.whatsappNumber || get().whatsappNumber,
-                  telegramUsername: refreshed.telegramUsername || get().telegramUsername,
-                  instagramUsername: refreshed.instagramUsername || get().instagramUsername,
-                  adminPin: refreshed.adminPin || get().adminPin,
-                  paymentAccounts: {
-                    ...get().paymentAccounts,
-                    ...(refreshed.paymentAccounts || {}),
-                  },
-                });
-              }
             });
           }
-        } catch (err) {
-          console.warn('[Store Settings Hydration Error]', err);
-          set({ isLoading: false });
-        }
-      },
-
-      updateSettings: async (newSettings) => {
-        // 1. Optimistic update
-        set((state) => ({ ...state, ...newSettings }));
-
-        // 2. Direct Supabase Query
-        const current = get();
-        await upsertStoreSettingsToSupabase({
-          whatsappNumber: current.whatsappNumber,
-          telegramUsername: current.telegramUsername,
-          instagramUsername: current.instagramUsername,
-          paymentAccounts: current.paymentAccounts,
-          adminPin: current.adminPin,
         });
-      },
-
-      updatePaymentAccounts: async (accounts) => {
-        // 1. Optimistic update
-        set((state) => ({
-          paymentAccounts: {
-            ...state.paymentAccounts,
-            ...accounts,
-          },
-        }));
-
-        // 2. Direct Supabase Query
-        const current = get();
-        await upsertStoreSettingsToSupabase({
-          whatsappNumber: current.whatsappNumber,
-          telegramUsername: current.telegramUsername,
-          instagramUsername: current.instagramUsername,
-          paymentAccounts: current.paymentAccounts,
-          adminPin: current.adminPin,
-        });
-      },
-
-      resetToDefaults: () => {
-        set(DEFAULT_SETTINGS);
-      },
-    }),
-    {
-      name: 'codora_store_settings_v2',
+      }
+    } catch (err) {
+      console.warn('[Store Settings Hydration Error]', err);
+      set({ isLoading: false });
     }
-  )
-);
+  },
+
+  updateSettings: async (newSettings) => {
+    const current = get();
+    const merged: StoreSettings = {
+      ...current,
+      ...newSettings,
+    };
+
+    // 1. Direct Supabase Query first
+    const res = await upsertStoreSettingsToSupabase(merged);
+    if (!res.success) {
+      return { success: false, error: res.error || 'فشل في حفظ إعدادات المتجر في السحابة' };
+    }
+
+    // 2. Update UI only after DB confirmation
+    set((state) => ({ ...state, ...newSettings }));
+    return { success: true };
+  },
+
+  updatePaymentAccounts: async (accounts) => {
+    const current = get();
+    const mergedAccounts = {
+      ...current.paymentAccounts,
+      ...accounts,
+    };
+
+    const merged: StoreSettings = {
+      ...current,
+      paymentAccounts: mergedAccounts,
+    };
+
+    // 1. Direct Supabase Query first
+    const res = await upsertStoreSettingsToSupabase(merged);
+    if (!res.success) {
+      return { success: false, error: res.error || 'فشل في حفظ حسابات الدفع في السحابة' };
+    }
+
+    // 2. Update UI only after DB confirmation
+    set({ paymentAccounts: mergedAccounts });
+    return { success: true };
+  },
+
+  resetToDefaults: () => {
+    set(DEFAULT_SETTINGS);
+  },
+}));

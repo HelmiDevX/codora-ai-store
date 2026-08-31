@@ -51,6 +51,7 @@ export async function fetchProductsFromSupabase(): Promise<Product[] | null> {
       .order('created_at', { ascending: false });
 
     if (error || !data || data.length === 0) {
+      if (error) console.warn('[Supabase Products Fetch Error]', error.message);
       return null;
     }
 
@@ -82,15 +83,15 @@ export async function fetchProductsFromSupabase(): Promise<Product[] | null> {
       metadata: row.metadata && typeof row.metadata === 'object' ? row.metadata : {},
     }));
   } catch (err) {
-    console.warn('[Supabase Products Fetch Error]', err);
+    console.warn('[Supabase Products Fetch Exception]', err);
     return null;
   }
 }
 
-export async function upsertProductToSupabase(product: Product): Promise<boolean> {
+export async function upsertProductToSupabase(product: Product): Promise<{ success: boolean; error: string | null }> {
   try {
     const supabase = getSupabaseClient();
-    if (!supabase) return false;
+    if (!supabase) return { success: false, error: 'Supabase client not initialized' };
 
     const row = {
       id: product.id,
@@ -116,30 +117,30 @@ export async function upsertProductToSupabase(product: Product): Promise<boolean
 
     const { error } = await supabase.from('products').upsert(row, { onConflict: 'id' });
     if (error) {
-      console.warn('[Supabase Upsert Product Error]', error.message);
-      return false;
+      console.error('[Supabase Upsert Product Error]', error.message);
+      return { success: false, error: error.message };
     }
-    return true;
+    return { success: true, error: null };
   } catch (err) {
-    console.warn('[Supabase Upsert Product Exception]', err);
-    return false;
+    console.error('[Supabase Upsert Product Exception]', err);
+    return { success: false, error: String(err) };
   }
 }
 
-export async function deleteProductFromSupabase(id: string): Promise<boolean> {
+export async function deleteProductFromSupabase(id: string): Promise<{ success: boolean; error: string | null }> {
   try {
     const supabase = getSupabaseClient();
-    if (!supabase) return false;
+    if (!supabase) return { success: false, error: 'Supabase client not initialized' };
 
     const { error } = await supabase.from('products').delete().eq('id', id);
     if (error) {
-      console.warn('[Supabase Delete Product Error]', error.message);
-      return false;
+      console.error('[Supabase Delete Product Error]', error.message);
+      return { success: false, error: error.message };
     }
-    return true;
+    return { success: true, error: null };
   } catch (err) {
-    console.warn('[Supabase Delete Product Exception]', err);
-    return false;
+    console.error('[Supabase Delete Product Exception]', err);
+    return { success: false, error: String(err) };
   }
 }
 
@@ -157,13 +158,15 @@ export async function fetchExchangeRatesFromSupabase(): Promise<ExchangeRatesMap
       .select('*')
       .maybeSingle();
 
-    if (error || !data) return null;
+    if (error || !data) {
+      if (error) console.warn('[Supabase Exchange Rates Fetch Error]', error.message);
+      return null;
+    }
 
     if (data.rates && typeof data.rates === 'object') {
       return data.rates as ExchangeRatesMap;
     }
 
-    // If stored as individual columns
     if (data.yer_aden || data.YER_ADEN) {
       return {
         USD: 1,
@@ -175,15 +178,15 @@ export async function fetchExchangeRatesFromSupabase(): Promise<ExchangeRatesMap
 
     return null;
   } catch (err) {
-    console.warn('[Supabase Exchange Rates Fetch Error]', err);
+    console.warn('[Supabase Exchange Rates Fetch Exception]', err);
     return null;
   }
 }
 
-export async function upsertExchangeRatesToSupabase(rates: ExchangeRatesMap): Promise<boolean> {
+export async function upsertExchangeRatesToSupabase(rates: ExchangeRatesMap): Promise<{ success: boolean; error: string | null }> {
   try {
     const supabase = getSupabaseClient();
-    if (!supabase) return false;
+    if (!supabase) return { success: false, error: 'Supabase client not initialized' };
 
     const row = {
       id: 1,
@@ -196,13 +199,13 @@ export async function upsertExchangeRatesToSupabase(rates: ExchangeRatesMap): Pr
 
     const { error } = await supabase.from('exchange_rates').upsert(row, { onConflict: 'id' });
     if (error) {
-      console.warn('[Supabase Upsert Exchange Rates Error]', error.message);
-      return false;
+      console.error('[Supabase Upsert Exchange Rates Error]', error.message);
+      return { success: false, error: error.message };
     }
-    return true;
+    return { success: true, error: null };
   } catch (err) {
-    console.warn('[Supabase Upsert Exchange Rates Exception]', err);
-    return false;
+    console.error('[Supabase Upsert Exchange Rates Exception]', err);
+    return { success: false, error: String(err) };
   }
 }
 
@@ -220,7 +223,10 @@ export async function fetchStoreSettingsFromSupabase(): Promise<StoreSettings | 
       .select('*')
       .maybeSingle();
 
-    if (error || !data) return null;
+    if (error || !data) {
+      if (error) console.warn('[Supabase Store Settings Fetch Error]', error.message);
+      return null;
+    }
 
     return {
       whatsappNumber: data.whatsapp_number || '967770000000',
@@ -247,15 +253,15 @@ export async function fetchStoreSettingsFromSupabase(): Promise<StoreSettings | 
       },
     };
   } catch (err) {
-    console.warn('[Supabase Store Settings Fetch Error]', err);
+    console.warn('[Supabase Store Settings Fetch Exception]', err);
     return null;
   }
 }
 
-export async function upsertStoreSettingsToSupabase(settings: StoreSettings): Promise<boolean> {
+export async function upsertStoreSettingsToSupabase(settings: StoreSettings): Promise<{ success: boolean; error: string | null }> {
   try {
     const supabase = getSupabaseClient();
-    if (!supabase) return false;
+    if (!supabase) return { success: false, error: 'Supabase client not initialized' };
 
     const row = {
       id: 1,
@@ -269,13 +275,13 @@ export async function upsertStoreSettingsToSupabase(settings: StoreSettings): Pr
 
     const { error } = await supabase.from('store_settings').upsert(row, { onConflict: 'id' });
     if (error) {
-      console.warn('[Supabase Upsert Store Settings Error]', error.message);
-      return false;
+      console.error('[Supabase Upsert Store Settings Error]', error.message);
+      return { success: false, error: error.message };
     }
-    return true;
+    return { success: true, error: null };
   } catch (err) {
-    console.warn('[Supabase Upsert Store Settings Exception]', err);
-    return false;
+    console.error('[Supabase Upsert Store Settings Exception]', err);
+    return { success: false, error: String(err) };
   }
 }
 
@@ -293,7 +299,10 @@ export async function fetchCouponsFromSupabase(): Promise<Record<string, Coupon>
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error || !data || data.length === 0) return null;
+    if (error || !data || data.length === 0) {
+      if (error) console.warn('[Supabase Coupons Fetch Error]', error.message);
+      return null;
+    }
 
     const map: Record<string, Coupon> = {};
     for (const row of data) {
@@ -316,15 +325,15 @@ export async function fetchCouponsFromSupabase(): Promise<Record<string, Coupon>
     }
     return map;
   } catch (err) {
-    console.warn('[Supabase Coupons Fetch Error]', err);
+    console.warn('[Supabase Coupons Fetch Exception]', err);
     return null;
   }
 }
 
-export async function upsertCouponToSupabase(coupon: Coupon): Promise<boolean> {
+export async function upsertCouponToSupabase(coupon: Coupon): Promise<{ success: boolean; error: string | null }> {
   try {
     const supabase = getSupabaseClient();
-    if (!supabase) return false;
+    if (!supabase) return { success: false, error: 'Supabase client not initialized' };
 
     const cleanCode = coupon.code.trim().toUpperCase();
     const row = {
@@ -345,31 +354,31 @@ export async function upsertCouponToSupabase(coupon: Coupon): Promise<boolean> {
 
     const { error } = await supabase.from('coupons').upsert(row, { onConflict: 'code' });
     if (error) {
-      console.warn('[Supabase Upsert Coupon Error]', error.message);
-      return false;
+      console.error('[Supabase Upsert Coupon Error]', error.message);
+      return { success: false, error: error.message };
     }
-    return true;
+    return { success: true, error: null };
   } catch (err) {
-    console.warn('[Supabase Upsert Coupon Exception]', err);
-    return false;
+    console.error('[Supabase Upsert Coupon Exception]', err);
+    return { success: false, error: String(err) };
   }
 }
 
-export async function deleteCouponFromSupabase(code: string): Promise<boolean> {
+export async function deleteCouponFromSupabase(code: string): Promise<{ success: boolean; error: string | null }> {
   try {
     const supabase = getSupabaseClient();
-    if (!supabase) return false;
+    if (!supabase) return { success: false, error: 'Supabase client not initialized' };
 
     const cleanCode = code.trim().toUpperCase();
     const { error } = await supabase.from('coupons').delete().ilike('code', cleanCode);
     if (error) {
-      console.warn('[Supabase Delete Coupon Error]', error.message);
-      return false;
+      console.error('[Supabase Delete Coupon Error]', error.message);
+      return { success: false, error: error.message };
     }
-    return true;
+    return { success: true, error: null };
   } catch (err) {
-    console.warn('[Supabase Delete Coupon Exception]', err);
-    return false;
+    console.error('[Supabase Delete Coupon Exception]', err);
+    return { success: false, error: String(err) };
   }
 }
 

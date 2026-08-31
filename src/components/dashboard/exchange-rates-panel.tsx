@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { RefreshCw, CheckCircle2, Save, Coins, ShieldAlert, TrendingUp } from 'lucide-react';
+import { RefreshCw, CheckCircle2, Save, Coins, AlertCircle, Loader2 } from 'lucide-react';
 import { useCurrencyStore } from '@/store/use-currency-store';
 import { Button } from '@/components/ui/button';
 import { soundManager } from '@/lib/audio';
@@ -12,22 +12,34 @@ export const ExchangeRatesPanel: React.FC = () => {
   const [adenRate, setAdenRate] = useState<number>(rates.YER_ADEN || 1650);
   const [sanaaRate, setSanaaRate] = useState<number>(rates.YER_SANAA || 535);
   const [sarRate, setSarRate] = useState<number>(rates.SAR || 3.75);
+  const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSaveRates = (e: React.FormEvent) => {
+  const handleSaveRates = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateRates({
+    setIsSaving(true);
+    setErrorMessage(null);
+
+    const res = await updateRates({
       YER_ADEN: Number(adenRate),
       YER_SANAA: Number(sanaaRate),
       SAR: Number(sarRate),
     });
+
+    setIsSaving(false);
+
+    if (!res.success) {
+      setErrorMessage(res.error || 'فشل في حفظ أسعار الصرف في السحابة');
+      return;
+    }
 
     setSavedSuccess(true);
     soundManager.playNotificationPing();
 
     setTimeout(() => {
       setSavedSuccess(false);
-    }, 3000);
+    }, 3500);
   };
 
   const handleResetDefaults = () => {
@@ -46,7 +58,7 @@ export const ExchangeRatesPanel: React.FC = () => {
             إدارة وتحديث أسعار الصرف العالمية (Exchange Rates Manager)
           </h3>
           <p className="text-xs text-slate-400 mt-1">
-            الأسعار المسجلة هنا تُحدّث تلقائياً كافة أسعار المنتجات والفواتير في واجهة المتجر والشراء الفوري.
+            الأسعار المسجلة هنا تُحفظ مباشرة في Supabase وتُحدّث تلقائياً كافة أسعار المنتجات والفواتير فوراً.
           </p>
         </div>
 
@@ -58,7 +70,14 @@ export const ExchangeRatesPanel: React.FC = () => {
       {savedSuccess && (
         <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs font-bold animate-in fade-in zoom-in-95">
           <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
-          <span>تم حفظ وبث أسعار الصرف الجديدة بنجاح! تم تحديث المتجر بالكامل فوراً.</span>
+          <span>تم حفظ وبث أسعار الصرف الجديدة في Supabase بنجاح! تم تحديث المتجر بالكامل فوراً.</span>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-red-950/60 border border-red-500/40 text-red-300 text-xs font-bold animate-shake">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <span>{errorMessage}</span>
         </div>
       )}
 
@@ -154,9 +173,18 @@ export const ExchangeRatesPanel: React.FC = () => {
             استعادة القيم الافتراضية
           </Button>
 
-          <Button type="submit" variant="primary" className="text-xs font-bold px-6 py-2.5 gap-2">
-            <Save className="h-4 w-4" />
-            حفظ وتحديث الأسعار (Save & Broadcast)
+          <Button type="submit" variant="primary" disabled={isSaving} className="text-xs font-bold px-6 py-2.5 gap-2">
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin ml-1" />
+                جارٍ الحفظ في السحابة...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                حفظ وتحديث الأسعار (Save & Broadcast)
+              </>
+            )}
           </Button>
         </div>
       </form>

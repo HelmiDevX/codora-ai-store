@@ -13,7 +13,9 @@ import {
   CircleDollarSign, 
   KeyRound, 
   CheckCircle2, 
-  RotateCcw 
+  RotateCcw,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { useStoreSettings } from '@/store/use-store-settings';
 import { Button } from '@/components/ui/button';
@@ -50,28 +52,39 @@ export const StoreSettingsPanel: React.FC = () => {
   const [usdtAddr, setUsdtAddr] = useState(paymentAccounts.binance_usdt.walletAddress);
   const [usdtNet, setUsdtNet] = useState(paymentAccounts.binance_usdt.network);
 
+  const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
+    setErrorMessage(null);
 
-    updateSettings({
+    const settingsRes = await updateSettings({
       whatsappNumber: wa.trim(),
       telegramUsername: tg.trim(),
       instagramUsername: ig.trim(),
       adminPin: pin.trim(),
     });
 
-    updatePaymentAccounts({
+    const accountsRes = await updatePaymentAccounts({
       kuraimi: { accountNumber: kuraimiAcc.trim(), beneficiaryName: kuraimiName.trim() },
       jeeb: { phoneNumber: jeebPhone.trim(), beneficiaryName: jeebName.trim() },
       qutaibi: { accountNumber: qutaibiAcc.trim(), beneficiaryName: qutaibiName.trim() },
       binance_usdt: { walletAddress: usdtAddr.trim(), network: usdtNet.trim() },
     });
 
+    setIsSaving(false);
+
+    if (!settingsRes.success || !accountsRes.success) {
+      setErrorMessage(settingsRes.error || accountsRes.error || 'فشل في حفظ الإعدادات في السحابة');
+      return;
+    }
+
     setSavedSuccess(true);
     soundManager.playNotificationPing();
-    setTimeout(() => setSavedSuccess(false), 3000);
+    setTimeout(() => setSavedSuccess(false), 3500);
   };
 
   const handleReset = () => {
@@ -121,7 +134,14 @@ export const StoreSettingsPanel: React.FC = () => {
       {savedSuccess && (
         <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs font-bold animate-in fade-in zoom-in-95">
           <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
-          <span>تم حفظ الإعدادات بنجاح! تم تحديث روابط الواتساب وبيانات الحسابات في المتجر والشراء الفوري.</span>
+          <span>تم حفظ وتعميم الإعدادات في Supabase بنجاح! تم تحديث المتجر ونوافذ الدفع فوراً.</span>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-red-950/60 border border-red-500/40 text-red-300 text-xs font-bold animate-shake">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <span>{errorMessage}</span>
         </div>
       )}
 
@@ -352,9 +372,18 @@ export const StoreSettingsPanel: React.FC = () => {
 
         {/* Save Button */}
         <div className="flex items-center justify-end pt-2">
-          <Button type="submit" variant="primary" className="text-xs font-bold px-8 py-3 gap-2">
-            <Save className="h-4 w-4" />
-            حفظ وتعميم الإعدادات (Save Configuration)
+          <Button type="submit" variant="primary" disabled={isSaving} className="text-xs font-bold px-8 py-3 gap-2">
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin ml-1" />
+                جارٍ الحفظ في السحابة...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                حفظ وتعميم الإعدادات (Save Configuration)
+              </>
+            )}
           </Button>
         </div>
       </form>

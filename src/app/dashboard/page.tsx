@@ -1,5 +1,8 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
@@ -11,9 +14,9 @@ import {
   Tag, 
   Settings,
   ArrowRight, 
-  Sparkles,
-  Lock,
-  Unlock
+  Sparkles, 
+  Lock, 
+  Unlock 
 } from 'lucide-react';
 import { RealtimeAlertBar } from '@/components/dashboard/realtime-alert-bar';
 import { StatsCards } from '@/components/dashboard/stats-cards';
@@ -25,6 +28,9 @@ import { StoreSettingsPanel } from '@/components/dashboard/store-settings-panel'
 import { Button } from '@/components/ui/button';
 import { useOrdersStore } from '@/store/use-orders-store';
 import { useStoreSettings } from '@/store/use-store-settings';
+import { useProductsStore } from '@/store/use-products-store';
+import { useCurrencyStore } from '@/store/use-currency-store';
+import { useCouponsStore } from '@/store/use-coupons-store';
 import { OrderPayload } from '@/types/order';
 import { soundManager } from '@/lib/audio';
 
@@ -35,14 +41,18 @@ export default function AdminDashboardPage() {
   const [incomingOrderToast, setIncomingOrderToast] = useState<OrderPayload | null>(null);
 
   // Admin PIN Protection State
-  const { adminPin } = useStoreSettings();
+  const { adminPin, fetchInitialData: fetchSettings } = useStoreSettings();
+  const { fetchInitialData: fetchProducts } = useProductsStore();
+  const { fetchInitialData: fetchCurrency } = useCurrencyStore();
+  const { fetchInitialData: fetchCoupons } = useCouponsStore();
+
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
 
   const { orders, addOrder } = useOrdersStore();
 
-  // Check sessionStorage for previous unlock in this session
+  // Check sessionStorage for previous unlock in this session & hydrate Supabase
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const sessionAuth = sessionStorage.getItem('codora_admin_unlocked');
@@ -50,7 +60,13 @@ export default function AdminDashboardPage() {
         setIsUnlocked(true);
       }
     }
-  }, []);
+
+    // Direct fresh fetch from Supabase on mount
+    fetchProducts();
+    fetchCurrency();
+    fetchSettings();
+    fetchCoupons();
+  }, [fetchProducts, fetchCurrency, fetchSettings, fetchCoupons]);
 
   // Listen to cross-tab BroadcastChannel for incoming orders from Storefront
   useEffect(() => {

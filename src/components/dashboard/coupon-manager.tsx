@@ -12,7 +12,9 @@ import {
   Trash2, 
   ToggleLeft, 
   ToggleRight, 
-  RotateCcw
+  RotateCcw,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { soundManager } from '@/lib/audio';
 
@@ -27,6 +29,8 @@ export const CouponManager: React.FC = () => {
 
   const couponList = Object.values(coupons);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // New Coupon Form State
   const [newCode, setNewCode] = useState('');
@@ -34,21 +38,32 @@ export const CouponManager: React.FC = () => {
   const [newDiscountValue, setNewDiscountValue] = useState<number>(10);
   const [newAffiliateName, setNewAffiliateName] = useState('');
 
-  const handleToggle = (code: string) => {
-    toggleCouponActive(code);
-    soundManager.playNotificationPing();
-  };
-
-  const handleDelete = (code: string) => {
-    if (confirm(`هل أنت متأكد من حذف كود الخصم (${code})؟`)) {
-      deleteCoupon(code);
+  const handleToggle = async (code: string) => {
+    const res = await toggleCouponActive(code);
+    if (!res.success) {
+      alert(`خطأ: ${res.error}`);
+    } else {
       soundManager.playNotificationPing();
     }
   };
 
-  const handleCreateCoupon = (e: React.FormEvent) => {
+  const handleDelete = async (code: string) => {
+    if (confirm(`هل أنت متأكد من حذف كود الخصم (${code}) نهائياً من السحابة؟`)) {
+      const res = await deleteCoupon(code);
+      if (!res.success) {
+        alert(`خطأ في الحذف: ${res.error}`);
+      } else {
+        soundManager.playNotificationPing();
+      }
+    }
+  };
+
+  const handleCreateCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCode.trim()) return;
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
 
     const created: Coupon = {
       code: newCode.trim().toUpperCase(),
@@ -60,7 +75,14 @@ export const CouponManager: React.FC = () => {
       isActive: true,
     };
 
-    addCoupon(created);
+    const res = await addCoupon(created);
+    setIsSubmitting(false);
+
+    if (!res.success) {
+      setErrorMessage(res.error || 'فشل في حفظ الكوبون في السحابة');
+      return;
+    }
+
     setIsAddModalOpen(false);
     soundManager.playNotificationPing();
 
@@ -80,7 +102,7 @@ export const CouponManager: React.FC = () => {
             إدارة الكوبونات والمسوقين (Coupons & Affiliates)
           </h3>
           <p className="text-xs text-slate-400 mt-1">
-            إنشاء رموز الخصم، وتتبع عدد مرات الاستخدام، وعائدات كل مؤثر ومسوق بالعمولة.
+            إنشاء رموز الخصم، وتتبع عدد مرات الاستخدام، وعائدات كل مؤثر ومسوق بالعمولة في Supabase مباشرة.
           </p>
         </div>
 
@@ -103,7 +125,10 @@ export const CouponManager: React.FC = () => {
           <Button
             variant="primary"
             size="sm"
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={() => {
+              setErrorMessage(null);
+              setIsAddModalOpen(true);
+            }}
             className="text-xs font-bold px-4 py-2 gap-1.5 shadow-lg shadow-indigo-600/30"
           >
             <Plus className="h-4 w-4" />
@@ -194,9 +219,16 @@ export const CouponManager: React.FC = () => {
         onClose={() => setIsAddModalOpen(false)}
         maxWidth="md"
         title="إنشاء كود خصم للمسوقين 🎟️"
-        description="حدد كود الخصم، النسبة المئوية، واسم الشريك الترويجي"
+        description="حدد كود الخصم، النسبة المئوية، واسم الشريك ليتم حفظه في Supabase"
       >
         <form onSubmit={handleCreateCoupon} className="space-y-4 py-2">
+          {errorMessage && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-semibold animate-shake">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5">
               كود الخصم (Coupon Code) *
@@ -257,8 +289,15 @@ export const CouponManager: React.FC = () => {
             <Button type="button" variant="secondary" onClick={() => setIsAddModalOpen(false)}>
               إلغاء
             </Button>
-            <Button type="submit" variant="primary">
-              تفعيل الكود
+            <Button type="submit" variant="primary" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin ml-1" />
+                  جارٍ الحفظ في السحابة...
+                </>
+              ) : (
+                'تفعيل الكود'
+              )}
             </Button>
           </div>
         </form>

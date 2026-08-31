@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { Product } from '@/types/product';
 import { MOCK_PRODUCTS } from '@/data/mock-products';
 import { 
@@ -14,116 +13,126 @@ interface ProductsStoreState {
   isLoading: boolean;
   isSyncedWithSupabase: boolean;
   fetchInitialData: () => Promise<void>;
-  addProduct: (product: Product) => Promise<void>;
-  updateProduct: (id: string, updated: Partial<Product>) => Promise<void>;
-  toggleProductAvailability: (id: string) => Promise<void>;
-  deleteProduct: (id: string) => Promise<void>;
+  addProduct: (product: Product) => Promise<{ success: boolean; error?: string }>;
+  updateProduct: (id: string, updated: Partial<Product>) => Promise<{ success: boolean; error?: string }>;
+  toggleProductAvailability: (id: string) => Promise<{ success: boolean; error?: string }>;
+  deleteProduct: (id: string) => Promise<{ success: boolean; error?: string }>;
   resetProducts: () => void;
 }
 
 let isSubscribed = false;
 
-export const useProductsStore = create<ProductsStoreState>()(
-  persist(
-    (set, get) => ({
-      products: MOCK_PRODUCTS,
-      isLoading: false,
-      isSyncedWithSupabase: false,
+export const useProductsStore = create<ProductsStoreState>()((set, get) => ({
+  products: [],
+  isLoading: true,
+  isSyncedWithSupabase: false,
 
-      fetchInitialData: async () => {
-        set({ isLoading: true });
-        try {
-          const liveProducts = await fetchProductsFromSupabase();
-          if (liveProducts && liveProducts.length > 0) {
-            set({ 
-              products: liveProducts, 
-              isSyncedWithSupabase: true, 
-              isLoading: false 
-            });
-          } else {
-            set({ isLoading: false });
-          }
-
-          // Setup Realtime Listener once
-          if (!isSubscribed && typeof window !== 'undefined') {
-            isSubscribed = true;
-            subscribeToSupabaseChanges('products', async () => {
-              const refreshed = await fetchProductsFromSupabase();
-              if (refreshed && refreshed.length > 0) {
-                set({ products: refreshed, isSyncedWithSupabase: true });
-              }
-            });
-          }
-        } catch (err) {
-          console.warn('[Products Store Hydration Error]', err);
-          set({ isLoading: false });
-        }
-      },
-
-      addProduct: async (product: Product) => {
-        // 1. Optimistic Update
-        set((state) => ({
-          products: [product, ...state.products.filter(p => p.id !== product.id)],
-        }));
-
-        // 2. Direct Supabase Query
-        await upsertProductToSupabase(product);
-      },
-
-      updateProduct: async (id: string, updated: Partial<Product>) => {
-        // 1. Optimistic Update
-        let targetProduct: Product | undefined;
-        set((state) => {
-          const newProducts = state.products.map((p) => {
-            if (p.id === id) {
-              targetProduct = { ...p, ...updated };
-              return targetProduct;
-            }
-            return p;
-          });
-          return { products: newProducts };
+  fetchInitialData: async () => {
+    set({ isLoading: true });
+    try {
+      const liveProducts = await fetchProductsFromSupabase();
+      if (liveProducts && liveProducts.length > 0) {
+        set({ 
+          products: liveProducts, 
+          isSyncedWithSupabase: true, 
+          isLoading: false 
         });
-
-        // 2. Direct Supabase Query
-        if (targetProduct) {
-          await upsertProductToSupabase(targetProduct);
-        }
-      },
-
-      toggleProductAvailability: async (id: string) => {
-        let targetProduct: Product | undefined;
-        set((state) => {
-          const newProducts = state.products.map((p) => {
-            if (p.id === id) {
-              targetProduct = { ...p, isAvailable: !p.isAvailable };
-              return targetProduct;
-            }
-            return p;
-          });
-          return { products: newProducts };
+      } else {
+        // If Supabase table is newly created and empty, provide default products
+        set({ 
+          products: MOCK_PRODUCTS, 
+          isSyncedWithSupabase: false, 
+          isLoading: false 
         });
+      }
 
-        if (targetProduct) {
-          await upsertProductToSupabase(targetProduct);
-        }
-      },
-
-      deleteProduct: async (id: string) => {
-        // 1. Optimistic Update
-        set((state) => ({
-          products: state.products.filter((p) => p.id !== id),
-        }));
-
-        // 2. Direct Supabase Query
-        await deleteProductFromSupabase(id);
-      },
-
-      resetProducts: () => {
-        set({ products: MOCK_PRODUCTS });
-      },
-    }),
-    {
-      name: 'codora_products_catalog_v2',
+      // Setup Realtime Listener once
+      if (!isSubscribed && typeof window !== 'undefined') {
+        isSubscribed = true;
+        subscribeToSupabaseChanges('products', async () => {
+          const refreshed = await fetchProductsFromSupabase();
+          if (refreshed && refreshed.length > 0) {
+            set({ products: refreshed, isSyncedWithSupabase: true });
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('[Products Store Hydration Error]', err);
+      set({ products: MOCK_PRODUCTS, isLoading: false });
     }
-  )
-);
+  },
+
+  addProduct: async (product: Product) => {
+    // 1. Direct Supabase Query first
+    const res = await upsertProductToSupabase(product);
+    if (!res.success) {
+      return { success: false, error: res.error || 'فشل في حفظ المنتج في السحابة' };
+    }
+
+    // 2. Update UI only after DB confirmation
+    set((state) => ({
+      products: [product, ...state.products.filter(p => p.id !== product.id)],
+    }));
+
+    return { success: true };
+  },
+
+  updateProduct: async (id: string, updated: Partial<Product>) => {
+    const existing = get().products.find(p => p.id === id);
+    if (!existing) return { success: false, error: 'Product not found' };
+
+    const targetProduct: Product = { ...existing, ...updated };
+
+    // 1. Direct Supabase Query first
+    const res = await upsertProductToSupabase(targetProduct);
+    if (!res.success) {
+      return { success: false, error: res.error || 'فشل في تعديل المنتج في السحابة' };
+    }
+
+    // 2. Update UI only after DB confirmation
+    set((state) => ({
+      products: state.products.map((p) => (p.id === id ? targetProduct : p)),
+    }));
+
+    return { success: true };
+  },
+
+  toggleProductAvailability: async (id: string) => {
+    const existing = get().products.find(p => p.id === id);
+    if (!existing) return { success: false, error: 'Product not found' };
+
+    const targetProduct: Product = { ...existing, isAvailable: !existing.isAvailable };
+
+    // 1. Direct Supabase Query first
+    const res = await upsertProductToSupabase(targetProduct);
+    if (!res.success) {
+      return { success: false, error: res.error || 'فشل في تغيير حالة المنتج' };
+    }
+
+    // 2. Update UI
+    set((state) => ({
+      products: state.products.map((p) => (p.id === id ? targetProduct : p)),
+    }));
+
+    return { success: true };
+  },
+
+  deleteProduct: async (id: string) => {
+    // 1. Direct Supabase Query first
+    const res = await deleteProductFromSupabase(id);
+    if (!res.success) {
+      return { success: false, error: res.error || 'فشل في حذف المنتج من السحابة' };
+    }
+
+    // 2. Update UI
+    set((state) => ({
+      products: state.products.filter((p) => p.id !== id),
+    }));
+
+    return { success: true };
+  },
+
+  resetProducts: () => {
+    set({ products: MOCK_PRODUCTS });
+  },
+}));

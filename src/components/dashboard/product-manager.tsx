@@ -13,9 +13,10 @@ import {
   ToggleLeft, 
   ToggleRight, 
   Sparkles, 
-  RotateCcw
+  RotateCcw,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
-import { formatCurrency } from '@/lib/currency';
 import { useCurrencyStore } from '@/store/use-currency-store';
 import { soundManager } from '@/lib/audio';
 
@@ -25,10 +26,13 @@ export const ProductManager: React.FC = () => {
     addProduct, 
     toggleProductAvailability, 
     deleteProduct, 
-    resetProducts 
+    resetProducts,
+    isLoading 
   } = useProductsStore();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { activeCurrency, formatPrice } = useCurrencyStore();
 
   // Form State for Add Product Modal
@@ -40,21 +44,32 @@ export const ProductManager: React.FC = () => {
   const [newDescription, setNewDescription] = useState('');
   const [newBadge, setNewBadge] = useState('جديد');
 
-  const handleToggle = (productId: string) => {
-    toggleProductAvailability(productId);
-    soundManager.playNotificationPing();
-  };
-
-  const handleDelete = (productId: string) => {
-    if (confirm('هل أنت متأكد من حذف هذا المنتج من المتجر؟')) {
-      deleteProduct(productId);
+  const handleToggle = async (productId: string) => {
+    const res = await toggleProductAvailability(productId);
+    if (!res.success) {
+      alert(`خطأ: ${res.error}`);
+    } else {
       soundManager.playNotificationPing();
     }
   };
 
-  const handleCreateProduct = (e: React.FormEvent) => {
+  const handleDelete = async (productId: string) => {
+    if (confirm('هل أنت متأكد من حذف هذا المنتج نهائياً من السحابة؟')) {
+      const res = await deleteProduct(productId);
+      if (!res.success) {
+        alert(`خطأ في الحذف: ${res.error}`);
+      } else {
+        soundManager.playNotificationPing();
+      }
+    }
+  };
+
+  const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
 
     const newProd: Product = {
       id: `prod_${Date.now()}`,
@@ -82,7 +97,14 @@ export const ProductManager: React.FC = () => {
       },
     };
 
-    addProduct(newProd);
+    const res = await addProduct(newProd);
+    setIsSubmitting(false);
+
+    if (!res.success) {
+      setErrorMessage(res.error || 'فشل في حفظ المنتج في السحابة');
+      return;
+    }
+
     setIsAddModalOpen(false);
     soundManager.playNotificationPing();
 
@@ -102,7 +124,7 @@ export const ProductManager: React.FC = () => {
             إدارة المنتجات والاشتراكات (Catalogue Manager)
           </h3>
           <p className="text-xs text-slate-400 mt-1">
-            المنتجات المضافة هنا تظهر مباشرة لجميع زوار المتجر في الصفحة الرئيسية.
+            المنتجات المضافة هنا تُحفظ مباشرة في Supabase وتظهر لجميع زوار المتجر فوراً.
           </p>
         </div>
 
@@ -125,7 +147,10 @@ export const ProductManager: React.FC = () => {
           <Button
             variant="primary"
             size="sm"
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={() => {
+              setErrorMessage(null);
+              setIsAddModalOpen(true);
+            }}
             className="text-xs font-bold px-4 py-2 gap-1.5 shadow-lg shadow-indigo-600/30"
           >
             <Plus className="h-4 w-4" />
@@ -220,9 +245,16 @@ export const ProductManager: React.FC = () => {
         onClose={() => setIsAddModalOpen(false)}
         maxWidth="lg"
         title="إضافة منتج أو اشتراك جديد 📦"
-        description="أدخل تفاصيل المنتج ليظهر في المتجر مباشرة"
+        description="أدخل تفاصيل المنتج ليتم حفظه مباشرة في قاعدة بيانات Supabase"
       >
         <form onSubmit={handleCreateProduct} className="space-y-4 py-2">
+          {errorMessage && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-semibold animate-shake">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5">
               عنوان المنتج (بالعربية) *
@@ -321,8 +353,15 @@ export const ProductManager: React.FC = () => {
             <Button type="button" variant="secondary" onClick={() => setIsAddModalOpen(false)}>
               إلغاء
             </Button>
-            <Button type="submit" variant="primary">
-              إضافة المنتج للمتجر
+            <Button type="submit" variant="primary" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin ml-1" />
+                  جارٍ الحفظ في السحابة...
+                </>
+              ) : (
+                'إضافة المنتج للمتجر'
+              )}
             </Button>
           </div>
         </form>

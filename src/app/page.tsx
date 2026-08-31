@@ -1,27 +1,41 @@
 'use client';
 
-import React, { useState } from 'react';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+import React, { useState, useEffect } from 'react';
 import { ProductCategory, Product } from '@/types/product';
 import { CategoryFilter } from '@/components/storefront/category-filter';
 import { ProductCard } from '@/components/storefront/product-card';
 import { useProductsStore } from '@/store/use-products-store';
+import { useCurrencyStore } from '@/store/use-currency-store';
+import { useStoreSettings } from '@/store/use-store-settings';
 import { 
   Sparkles, 
   ShieldCheck, 
   Zap, 
   Headphones, 
-  Wallet,
-  Layers,
-  Loader2
+  Wallet, 
+  Layers, 
+  Loader2 
 } from 'lucide-react';
 
 export default function StorefrontPage() {
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory | 'all'>('all');
-  const { products, isLoading, isSyncedWithSupabase } = useProductsStore();
+  const { products, isLoading, isSyncedWithSupabase, fetchInitialData: fetchProducts } = useProductsStore();
+  const { fetchInitialData: fetchCurrency } = useCurrencyStore();
+  const { fetchInitialData: fetchSettings } = useStoreSettings();
+
+  // Fresh data hydration directly from Supabase on mount
+  useEffect(() => {
+    fetchProducts();
+    fetchCurrency();
+    fetchSettings();
+  }, [fetchProducts, fetchCurrency, fetchSettings]);
 
   const filteredProducts: Product[] =
     selectedCategory === 'all'
-      ? products.filter(p => p.isAvailable)
+      ? products.filter((p) => p.isAvailable)
       : products.filter((p) => p.category === selectedCategory && p.isAvailable);
 
   return (
