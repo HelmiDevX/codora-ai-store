@@ -3,16 +3,25 @@ import { persist } from 'zustand/middleware';
 import { CurrencyCode, ExchangeRatesMap } from '@/types/currency';
 import { DEFAULT_EXCHANGE_RATES, EXCHANGE_RATES_LAST_UPDATED } from '@/data/mock-rates';
 import { convertFromUSD, formatCurrency } from '@/lib/currency';
+import { 
+  fetchExchangeRatesFromSupabase, 
+  upsertExchangeRatesToSupabase, 
+  subscribeToSupabaseChanges 
+} from '@/lib/supabase';
 
 interface CurrencyStoreState {
   activeCurrency: CurrencyCode;
   rates: ExchangeRatesMap;
   lastUpdated: string;
+  isLoading: boolean;
+  fetchInitialData: () => Promise<void>;
   setCurrency: (currency: CurrencyCode) => void;
-  updateRates: (newRates: Partial<ExchangeRatesMap>) => void;
+  updateRates: (newRates: Partial<ExchangeRatesMap>) => Promise<void>;
   convertPrice: (amountUSD: number) => number;
   formatPrice: (amountUSD: number, locale?: 'ar' | 'en') => string;
 }
+
+let isRatesSubscribed = false;
 
 export const useCurrencyStore = create<CurrencyStoreState>()(
   persist(
@@ -20,16 +29,59 @@ export const useCurrencyStore = create<CurrencyStoreState>()(
       activeCurrency: 'USD',
       rates: DEFAULT_EXCHANGE_RATES,
       lastUpdated: EXCHANGE_RATES_LAST_UPDATED,
+      isLoading: false,
+
+      fetchInitialData: async () => {
+        set({ isLoading: true });
+        try {
+          const liveRates = await fetchExchangeRatesFromSupabase();
+          if (liveRates) {
+            set({ 
+              rates: { ...DEFAULT_EXCHANGE_RATES, ...liveRates }, 
+              lastUpdated: new Date().toISOString(),
+              isLoading: false 
+            });
+          } else {
+            set({ isLoading: false });
+          }
+
+          if (!isRatesSubscribed && typeof window !== 'undefined') {
+            isRatesSubscribed = true;
+            subscribeToSupabaseChanges('exchange_rates', async () => {
+              const refreshed = await fetchExchangeRatesFromSupabase();
+              if (refreshed) {
+                set({ 
+                  rates: { ...DEFAULT_EXCHANGE_RATES, ...refreshed }, 
+                  lastUpdated: new Date().toISOString() 
+                });
+              }
+            });
+          }
+        } catch (err) {
+          console.warn('[Currency Store Hydration Error]', err);
+          set({ isLoading: false });
+        }
+      },
 
       setCurrency: (currency: CurrencyCode) => {
         set({ activeCurrency: currency });
       },
 
-      updateRates: (newRates: Partial<ExchangeRatesMap>) => {
-        set((state) => ({
-          rates: { ...state.rates, ...newRates },
+      updateRates: async (newRates: Partial<ExchangeRatesMap>) => {
+        const currentRates = get().rates;
+        const mergedRates: ExchangeRatesMap = {
+          ...currentRates,
+          ...newRates,
+        };
+
+        // 1. Optimistic Local Update
+        set({
+          rates: mergedRates,
           lastUpdated: new Date().toISOString(),
-        }));
+        });
+
+        // 2. Direct Supabase Query
+        await upsertExchangeRatesToSupabase(mergedRates);
       },
 
       convertPrice: (amountUSD: number) => {
@@ -44,7 +96,7 @@ export const useCurrencyStore = create<CurrencyStoreState>()(
       },
     }),
     {
-      name: 'codora_currency_rates_v1',
+      name: 'codora_currency_rates_v2',
     }
   )
 );

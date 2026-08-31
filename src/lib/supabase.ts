@@ -1,6 +1,9 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import { OrderPayload } from '@/types/order';
+import { Product } from '@/types/product';
 import { Coupon } from '@/types/coupon';
+import { ExchangeRatesMap } from '@/types/currency';
+import { StoreSettings } from '@/store/use-store-settings';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -33,10 +36,347 @@ export function getSupabaseClient(): SupabaseClient | null {
   return null;
 }
 
-/**
- * Uploads payment receipt image to Supabase Storage 'receipts' bucket.
- * Encapsulated in try...catch with seamless fallback.
- */
+/* =========================================================================
+   PRODUCTS (CRUD + Fetch)
+========================================================================= */
+
+export async function fetchProductsFromSupabase(): Promise<Product[] | null> {
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error || !data || data.length === 0) {
+      return null;
+    }
+
+    return data.map((row: any): Product => ({
+      id: row.id,
+      slug: row.slug || row.id,
+      title: row.title || row.title_ar,
+      titleAr: row.title_ar || row.title,
+      shortDescription: row.short_description || '',
+      shortDescriptionAr: row.short_description_ar || row.short_description || '',
+      fullDescription: row.full_description || '',
+      fullDescriptionAr: row.full_description_ar || '',
+      category: row.category || 'ai-subscription',
+      tier: row.tier || 'monthly',
+      priceUSD: Number(row.price_usd || row.price || 0),
+      badgeTextAr: row.badge_text_ar || undefined,
+      isPopular: Boolean(row.is_popular),
+      isAvailable: row.is_available !== undefined ? Boolean(row.is_available) : true,
+      instantDelivery: row.instant_delivery !== undefined ? Boolean(row.instant_delivery) : true,
+      thumbnailUrl: row.thumbnail_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
+      features: Array.isArray(row.features)
+        ? row.features
+        : typeof row.features === 'string'
+        ? JSON.parse(row.features)
+        : [
+            { id: 'f1', title: 'Full Warranty', titleAr: 'ضمان كامل ومستمر طوال المدة', included: true },
+            { id: 'f2', title: 'Instant Activation', titleAr: 'تسليم وتفعيل فوري على مدار 24 ساعة', included: true },
+          ],
+      metadata: row.metadata && typeof row.metadata === 'object' ? row.metadata : {},
+    }));
+  } catch (err) {
+    console.warn('[Supabase Products Fetch Error]', err);
+    return null;
+  }
+}
+
+export async function upsertProductToSupabase(product: Product): Promise<boolean> {
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) return false;
+
+    const row = {
+      id: product.id,
+      slug: product.slug,
+      title: product.title,
+      title_ar: product.titleAr,
+      short_description: product.shortDescription,
+      short_description_ar: product.shortDescriptionAr,
+      full_description: product.fullDescription,
+      full_description_ar: product.fullDescriptionAr,
+      category: product.category,
+      tier: product.tier,
+      price_usd: product.priceUSD,
+      badge_text_ar: product.badgeTextAr || null,
+      is_popular: Boolean(product.isPopular),
+      is_available: product.isAvailable,
+      instant_delivery: product.instantDelivery,
+      thumbnail_url: product.thumbnailUrl,
+      features: product.features,
+      metadata: product.metadata,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from('products').upsert(row, { onConflict: 'id' });
+    if (error) {
+      console.warn('[Supabase Upsert Product Error]', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Supabase Upsert Product Exception]', err);
+    return false;
+  }
+}
+
+export async function deleteProductFromSupabase(id: string): Promise<boolean> {
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) return false;
+
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) {
+      console.warn('[Supabase Delete Product Error]', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Supabase Delete Product Exception]', err);
+    return false;
+  }
+}
+
+/* =========================================================================
+   EXCHANGE RATES (CRUD + Fetch)
+========================================================================= */
+
+export async function fetchExchangeRatesFromSupabase(): Promise<ExchangeRatesMap | null> {
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+      .from('exchange_rates')
+      .select('*')
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    if (data.rates && typeof data.rates === 'object') {
+      return data.rates as ExchangeRatesMap;
+    }
+
+    // If stored as individual columns
+    if (data.yer_aden || data.YER_ADEN) {
+      return {
+        USD: 1,
+        YER_ADEN: Number(data.yer_aden || data.YER_ADEN || 1650),
+        YER_SANAA: Number(data.yer_sanaa || data.YER_SANAA || 535),
+        SAR: Number(data.sar || data.SAR || 3.75),
+      };
+    }
+
+    return null;
+  } catch (err) {
+    console.warn('[Supabase Exchange Rates Fetch Error]', err);
+    return null;
+  }
+}
+
+export async function upsertExchangeRatesToSupabase(rates: ExchangeRatesMap): Promise<boolean> {
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) return false;
+
+    const row = {
+      id: 1,
+      rates: rates,
+      yer_aden: rates.YER_ADEN,
+      yer_sanaa: rates.YER_SANAA,
+      sar: rates.SAR,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from('exchange_rates').upsert(row, { onConflict: 'id' });
+    if (error) {
+      console.warn('[Supabase Upsert Exchange Rates Error]', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Supabase Upsert Exchange Rates Exception]', err);
+    return false;
+  }
+}
+
+/* =========================================================================
+   STORE SETTINGS (CRUD + Fetch)
+========================================================================= */
+
+export async function fetchStoreSettingsFromSupabase(): Promise<StoreSettings | null> {
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+      .from('store_settings')
+      .select('*')
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    return {
+      whatsappNumber: data.whatsapp_number || '967770000000',
+      telegramUsername: data.telegram_username || 'ai_store_support',
+      instagramUsername: data.instagram_username || 'aistore_ye',
+      adminPin: data.admin_pin || '2026',
+      paymentAccounts: data.payment_accounts || {
+        kuraimi: {
+          accountNumber: data.kuraimi_account || '3001234567',
+          beneficiaryName: data.kuraimi_beneficiary || 'متجر الذكاء الاصطناعي',
+        },
+        jeeb: {
+          phoneNumber: data.jeeb_phone || '777123456',
+          beneficiaryName: data.jeeb_beneficiary || 'متجر كودورا AI',
+        },
+        qutaibi: {
+          accountNumber: data.qutaibi_account || '12345678',
+          beneficiaryName: data.qutaibi_beneficiary || 'مؤسسة كودورا للبرمجيات',
+        },
+        binance_usdt: {
+          walletAddress: data.usdt_address || 'TXYZ1234567890USDTNetwork',
+          network: data.usdt_network || 'Tron (TRC-20)',
+        },
+      },
+    };
+  } catch (err) {
+    console.warn('[Supabase Store Settings Fetch Error]', err);
+    return null;
+  }
+}
+
+export async function upsertStoreSettingsToSupabase(settings: StoreSettings): Promise<boolean> {
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) return false;
+
+    const row = {
+      id: 1,
+      whatsapp_number: settings.whatsappNumber,
+      telegram_username: settings.telegramUsername,
+      instagram_username: settings.instagramUsername,
+      admin_pin: settings.adminPin,
+      payment_accounts: settings.paymentAccounts,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from('store_settings').upsert(row, { onConflict: 'id' });
+    if (error) {
+      console.warn('[Supabase Upsert Store Settings Error]', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Supabase Upsert Store Settings Exception]', err);
+    return false;
+  }
+}
+
+/* =========================================================================
+   COUPONS (CRUD + Fetch)
+========================================================================= */
+
+export async function fetchCouponsFromSupabase(): Promise<Record<string, Coupon> | null> {
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+      .from('coupons')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error || !data || data.length === 0) return null;
+
+    const map: Record<string, Coupon> = {};
+    for (const row of data) {
+      const cleanCode = (row.code || '').trim().toUpperCase();
+      if (!cleanCode) continue;
+
+      map[cleanCode] = {
+        code: cleanCode,
+        discountType: (row.discount_type === 'percentage' || row.discount_type === 'percent') ? 'percentage' : 'fixed_usd',
+        discountValue: Number(row.discount_value || row.discount_amount || 0),
+        affiliateName: row.affiliate_name || row.marketer_name || undefined,
+        minOrderUSD: row.min_order_usd ? Number(row.min_order_usd) : undefined,
+        maxDiscountUSD: row.max_discount_usd ? Number(row.max_discount_usd) : undefined,
+        expiresAt: row.expires_at || undefined,
+        usageLimit: row.usage_limit || row.max_uses ? Number(row.usage_limit || row.max_uses) : undefined,
+        usedCount: Number(row.current_uses || row.used_count || 0),
+        totalRevenueUSD: Number(row.total_revenue || 0),
+        isActive: row.is_active !== undefined ? Boolean(row.is_active) : true,
+      };
+    }
+    return map;
+  } catch (err) {
+    console.warn('[Supabase Coupons Fetch Error]', err);
+    return null;
+  }
+}
+
+export async function upsertCouponToSupabase(coupon: Coupon): Promise<boolean> {
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) return false;
+
+    const cleanCode = coupon.code.trim().toUpperCase();
+    const row = {
+      code: cleanCode,
+      discount_type: coupon.discountType,
+      discount_value: coupon.discountValue,
+      affiliate_name: coupon.affiliateName || null,
+      min_order_usd: coupon.minOrderUSD || null,
+      max_discount_usd: coupon.maxDiscountUSD || null,
+      expires_at: coupon.expiresAt || null,
+      usage_limit: coupon.usageLimit || null,
+      current_uses: coupon.usedCount || 0,
+      used_count: coupon.usedCount || 0,
+      total_revenue: coupon.totalRevenueUSD || 0,
+      is_active: coupon.isActive,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from('coupons').upsert(row, { onConflict: 'code' });
+    if (error) {
+      console.warn('[Supabase Upsert Coupon Error]', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Supabase Upsert Coupon Exception]', err);
+    return false;
+  }
+}
+
+export async function deleteCouponFromSupabase(code: string): Promise<boolean> {
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) return false;
+
+    const cleanCode = code.trim().toUpperCase();
+    const { error } = await supabase.from('coupons').delete().ilike('code', cleanCode);
+    if (error) {
+      console.warn('[Supabase Delete Coupon Error]', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Supabase Delete Coupon Exception]', err);
+    return false;
+  }
+}
+
+/* =========================================================================
+   RECEIPTS & ORDERS
+========================================================================= */
+
 export async function uploadReceiptImage(
   fileOrBase64: File | Blob | string,
   fileName: string
@@ -44,7 +384,7 @@ export async function uploadReceiptImage(
   try {
     const supabase = getSupabaseClient();
     if (!supabase) {
-      console.warn('[Supabase Storage] Supabase client is not configured, using local fallback.');
+      console.warn('[Supabase Storage] Client not initialized, using local fallback.');
       return { url: null, error: 'Supabase client not initialized' };
     }
 
@@ -52,7 +392,6 @@ export async function uploadReceiptImage(
     let extension = 'png';
 
     if (typeof fileOrBase64 === 'string') {
-      // Base64 to Blob conversion
       const matches = fileOrBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
       if (matches && matches.length === 3) {
         const contentType = matches[1];
@@ -80,7 +419,7 @@ export async function uploadReceiptImage(
     const cleanFileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${extension}`;
     const filePath = `receipts/${cleanFileName}`;
 
-    const { data, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('receipts')
       .upload(filePath, fileBody, {
         cacheControl: '3600',
@@ -92,7 +431,6 @@ export async function uploadReceiptImage(
       return { url: null, error: uploadError.message };
     }
 
-    // Get public URL
     const { data: publicUrlData } = supabase.storage
       .from('receipts')
       .getPublicUrl(filePath);
@@ -102,24 +440,16 @@ export async function uploadReceiptImage(
       error: null,
     };
   } catch (err) {
-    console.warn('[Supabase Storage Exception] Failed to upload receipt to cloud:', err);
+    console.warn('[Supabase Storage Exception]', err);
     return { url: null, error: String(err) };
   }
 }
 
-/**
- * Inserts a new order record into the Supabase 'orders' table.
- * Encapsulated in try...catch to ensure storefront flow never crashes.
- */
 export async function syncOrderToSupabase(order: OrderPayload): Promise<{ success: boolean; error: string | null }> {
   try {
     const supabase = getSupabaseClient();
-    if (!supabase) {
-      console.warn('[Supabase Sync] Supabase client is not available, order saved locally.');
-      return { success: false, error: 'Supabase client unavailable' };
-    }
+    if (!supabase) return { success: false, error: 'Supabase client unavailable' };
 
-    // Validate required fields before inserting
     if (!order || !order.id || !order.customer?.fullName) {
       return { success: false, error: 'Missing required order fields' };
     }
@@ -158,14 +488,11 @@ export async function syncOrderToSupabase(order: OrderPayload): Promise<{ succes
 
     return { success: true, error: null };
   } catch (err) {
-    console.warn('[Supabase DB Exception] Error synchronizing order:', err);
+    console.warn('[Supabase DB Exception]', err);
     return { success: false, error: String(err) };
   }
 }
 
-/**
- * Fetches dynamic coupon record from Supabase 'coupons' table by normalized code.
- */
 export async function fetchCouponFromSupabase(code: string): Promise<Coupon | null> {
   try {
     const supabase = getSupabaseClient();
@@ -179,35 +506,27 @@ export async function fetchCouponFromSupabase(code: string): Promise<Coupon | nu
       .ilike('code', cleanCode)
       .maybeSingle();
 
-    if (error || !data) {
-      return null;
-    }
+    if (error || !data) return null;
 
-    // Map database row to standard Coupon object
-    const coupon: Coupon = {
+    return {
       code: data.code || cleanCode,
       discountType: (data.discount_type === 'percentage' || data.discount_type === 'percent') ? 'percentage' : 'fixed_usd',
       discountValue: Number(data.discount_value || data.discount_amount || 0),
-      affiliateName: data.affiliate_name || data.marketer_name || data.influencer_name || undefined,
+      affiliateName: data.affiliate_name || data.marketer_name || undefined,
       minOrderUSD: data.min_order_usd ? Number(data.min_order_usd) : undefined,
       maxDiscountUSD: data.max_discount_usd ? Number(data.max_discount_usd) : undefined,
       expiresAt: data.expires_at || undefined,
       usageLimit: data.usage_limit || data.max_uses ? Number(data.usage_limit || data.max_uses) : undefined,
       usedCount: Number(data.current_uses || data.used_count || 0),
-      totalRevenueUSD: Number(data.total_revenue || data.total_revenue_usd || 0),
+      totalRevenueUSD: Number(data.total_revenue || 0),
       isActive: data.is_active !== undefined ? Boolean(data.is_active) : true,
     };
-
-    return coupon;
   } catch (err) {
     console.warn('[Supabase Coupon Lookup Exception]', err);
     return null;
   }
 }
 
-/**
- * Increments coupon usage count (current_uses) in Supabase.
- */
 export async function incrementCouponUsageInSupabase(code: string, orderTotalUSD: number): Promise<void> {
   try {
     const supabase = getSupabaseClient();
@@ -215,7 +534,6 @@ export async function incrementCouponUsageInSupabase(code: string, orderTotalUSD
 
     const cleanCode = code.trim().toUpperCase();
 
-    // Fetch existing count first
     const { data } = await supabase
       .from('coupons')
       .select('id, current_uses, used_count, total_revenue')
@@ -238,5 +556,35 @@ export async function incrementCouponUsageInSupabase(code: string, orderTotalUSD
     }
   } catch (err) {
     console.warn('[Supabase Coupon Usage Increment Exception]', err);
+  }
+}
+
+/* =========================================================================
+   REALTIME SUBSCRIPTION HELPER
+========================================================================= */
+
+export function subscribeToSupabaseChanges(
+  tableName: string,
+  onPayload: (payload: any) => void
+): RealtimeChannel | null {
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) return null;
+
+    const channel = supabase
+      .channel(`public-db-${tableName}-${Date.now()}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: tableName },
+        (payload) => {
+          onPayload(payload);
+        }
+      )
+      .subscribe();
+
+    return channel;
+  } catch (err) {
+    console.warn(`[Supabase Realtime Subscription Error on ${tableName}]`, err);
+    return null;
   }
 }

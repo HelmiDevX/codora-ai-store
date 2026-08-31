@@ -54,33 +54,33 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/70 backdrop-blur-md transition-opacity duration-300 animate-in fade-in"
+        className="fixed inset-0 bg-black/75 backdrop-blur-md transition-opacity duration-300 animate-in fade-in"
       />
 
-      {/* Modal Dialog */}
+      {/* Modal Dialog (Mobile-First 95% width with max-h-[90vh]) */}
       <div
         className={cn(
-          'relative w-full rounded-2xl bg-slate-900/95 border border-slate-700/60 p-6 text-slate-100 shadow-2xl backdrop-blur-xl z-10 animate-in zoom-in-95 duration-200',
+          'relative w-[95%] max-w-lg mx-auto max-h-[90vh] overflow-y-auto rounded-3xl bg-slate-900/95 border border-slate-700/70 p-4 sm:p-6 text-slate-100 shadow-2xl backdrop-blur-2xl z-10 animate-in zoom-in-95 duration-200 scrollbar-thin',
           maxWidths[maxWidth]
         )}
       >
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-start justify-between pb-4 mb-4 border-b border-slate-800">
-            <div>
-              {title && <h3 className="text-xl font-bold text-white tracking-tight">{title}</h3>}
+          <div className="flex items-start justify-between pb-3 sm:pb-4 mb-3 sm:mb-4 border-b border-slate-800">
+            <div className="pr-1 pl-6">
+              {title && <h3 className="text-base sm:text-xl font-bold text-white tracking-tight leading-snug">{title}</h3>}
               {description && (
-                <p className="mt-1 text-sm text-slate-400">{description}</p>
+                <p className="mt-0.5 sm:mt-1 text-xs text-slate-400">{description}</p>
               )}
             </div>
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
+                className="rounded-xl p-2 text-slate-400 hover:bg-white/10 hover:text-white transition-colors active:scale-95"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
@@ -90,7 +90,7 @@ export const Modal: React.FC<ModalProps> = ({
         )}
 
         {/* Content */}
-        <div>{children}</div>
+        <div className="w-full">{children}</div>
       </div>
     </div>
   );

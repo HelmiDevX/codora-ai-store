@@ -78,7 +78,7 @@ export const CheckoutModal: React.FC = () => {
   const dynamicPaymentOptions: PaymentMethodDetail[] = [
     {
       id: 'kuraimi',
-      nameAr: 'بنك الكريمي (Kuraimi Bank)',
+      nameAr: 'بنك الكريمي (Kuraimi)',
       nameEn: 'Kuraimi Bank',
       accountType: 'account',
       accountValue: paymentAccounts?.kuraimi?.accountNumber || '3001234567',
@@ -88,7 +88,7 @@ export const CheckoutModal: React.FC = () => {
     },
     {
       id: 'jeeb',
-      nameAr: 'محفظة جيب (Jeeb Wallet)',
+      nameAr: 'محفظة جيب (Jeeb)',
       nameEn: 'Jeeb Wallet',
       accountType: 'phone',
       accountValue: paymentAccounts?.jeeb?.phoneNumber || '777123456',
@@ -108,7 +108,7 @@ export const CheckoutModal: React.FC = () => {
     },
     {
       id: 'binance_usdt',
-      nameAr: 'بايننس (Binance USDT - TRC20)',
+      nameAr: 'بايننس (USDT - TRC20)',
       nameEn: 'Binance USDT (TRC-20)',
       accountType: 'crypto_address',
       accountValue: paymentAccounts?.binance_usdt?.walletAddress || 'TXYZ1234567890USDTNetwork',
@@ -453,11 +453,11 @@ export const CheckoutModal: React.FC = () => {
     <Modal
       isOpen={isOpen}
       onClose={closeCheckout}
-      maxWidth="xl"
+      maxWidth="md"
       title="إتمام الطلب السريع ⚡"
       description="خطوات بسيطة وسريعة لتأكيد طلبك وتفعيل حسابك مباشرة"
     >
-      <div className="space-y-6 max-h-[80vh] overflow-y-auto pl-1 pr-1 scrollbar-thin">
+      <div className="space-y-4 sm:space-y-5 w-full">
         {/* Error Alert if Validation Fails */}
         {errorMessage && (
           <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-semibold animate-shake">
@@ -466,57 +466,59 @@ export const CheckoutModal: React.FC = () => {
           </div>
         )}
 
-        {/* Product Summary Header Card */}
-        <div className="p-4 rounded-2xl bg-slate-950/80 border border-indigo-500/20 backdrop-blur-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold flex-shrink-0">
-              <Sparkles className="h-6 w-6" />
+        {/* Product Summary Header Card (Mobile-First Layout) */}
+        <div className="p-3 sm:p-4 rounded-2xl bg-slate-950/80 border border-indigo-500/20 backdrop-blur-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 w-full">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold flex-shrink-0">
+              <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             <div>
-              <h4 className="font-bold text-white text-sm sm:text-base">
+              <h4 className="font-bold text-white text-xs sm:text-base leading-snug">
                 {selectedProduct.titleAr}
               </h4>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
                 <Badge variant="purple" size="sm">
                   {selectedProduct.metadata?.durationAr || selectedProduct.tier}
                 </Badge>
-                <span className="text-xs text-slate-400 font-mono">
+                <span className="text-[10px] sm:text-xs text-slate-400 font-mono">
                   {selectedProduct.metadata?.platform || selectedProduct.category}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="text-right w-full sm:w-auto border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-800">
-            <div className="text-xs text-slate-400">الإجمالي المستحق:</div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl sm:text-2xl font-black text-emerald-400">
-                {formattedFinalPrice}
-              </span>
-              {formattedOriginalPrice && (
-                <span className="text-xs text-slate-500 line-through">
-                  {formattedOriginalPrice}
+          <div className="text-right w-full sm:w-auto border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-800 flex items-center justify-between sm:block">
+            <div className="text-[11px] sm:text-xs text-slate-400">الإجمالي المستحق:</div>
+            <div className="text-right">
+              <div className="flex items-baseline gap-1.5 justify-end">
+                <span className="text-lg sm:text-2xl font-black text-emerald-400">
+                  {formattedFinalPrice}
                 </span>
-              )}
-            </div>
-            <div className="text-[11px] text-slate-500 font-mono">
-              (${finalPriceUSD.toFixed(2)} USD)
+                {formattedOriginalPrice && (
+                  <span className="text-[10px] sm:text-xs text-slate-500 line-through">
+                    {formattedOriginalPrice}
+                  </span>
+                )}
+              </div>
+              <div className="text-[10px] text-slate-500 font-mono">
+                (${finalPriceUSD.toFixed(2)} USD)
+              </div>
             </div>
           </div>
         </div>
 
         {/* STEP 1: Customer Info & Dynamic Coupon Engine */}
-        <div className="space-y-4 p-4 rounded-2xl bg-slate-900/50 border border-slate-800">
+        <div className="space-y-3 p-3 sm:p-4 rounded-2xl bg-slate-900/50 border border-slate-800 w-full">
           <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5 pb-2 border-b border-slate-800/80">
-            <span className="h-5 w-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px]">
+            <span className="h-5 w-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px] flex-shrink-0">
               1
             </span>
             بيانات العميل وكوبون الخصم
           </div>
 
-          {/* Customer Name Input */}
+          {/* Customer Name Input (py-3 text-base sm:text-sm to prevent iOS zoom) */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
               الاسم الكريم (Customer Name) <span className="text-red-400">*</span>
             </label>
             <input
@@ -528,35 +530,35 @@ export const CheckoutModal: React.FC = () => {
                 setCustomerName(e.target.value);
                 if (errorMessage) setErrorMessage(null);
               }}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-950/80 border border-slate-700 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-xs sm:text-sm"
+              className="w-full px-3.5 py-3 rounded-xl bg-slate-950/80 border border-slate-700 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-base sm:text-sm"
             />
           </div>
 
           {/* Dynamic Coupon Engine Input & Savings Badge */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+            <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
               <span className="flex items-center gap-1">
                 <Tag className="h-3.5 w-3.5 text-indigo-400" />
                 كود الخصم (Coupon Code)
               </span>
-              <span className="text-[10px] text-indigo-300">تحقق ديناميكي مباشر</span>
+              <span className="text-[10px] text-indigo-300">تحقق ديناميكي</span>
             </label>
 
             {!appliedCoupon ? (
-              <form onSubmit={handleApplyCoupon} className="flex gap-2">
+              <form onSubmit={handleApplyCoupon} className="flex gap-2 w-full">
                 <input
                   type="text"
-                  placeholder="أدخل كود الخصم هنا (مثال: AI2026)..."
+                  placeholder="أدخل كود الخصم (AI2026)..."
                   value={couponInput}
                   onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                  className="flex-1 px-4 py-2 rounded-xl bg-slate-950/80 border border-slate-700 text-white uppercase font-mono placeholder:text-slate-500 placeholder:normal-case focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-xs sm:text-sm"
+                  className="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl bg-slate-950/80 border border-slate-700 text-white uppercase font-mono placeholder:text-slate-500 placeholder:normal-case focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-base sm:text-sm"
                 />
                 <Button 
                   type="submit" 
                   size="sm" 
                   variant="primary" 
                   disabled={isCheckingCoupon}
-                  className="text-xs px-4"
+                  className="text-xs px-4 h-11 flex-shrink-0"
                 >
                   {isCheckingCoupon ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -571,8 +573,8 @@ export const CheckoutModal: React.FC = () => {
                   <Badge variant="success" size="sm" className="font-mono font-bold">
                     {appliedCoupon.code}
                   </Badge>
-                  <span className="text-emerald-300 font-semibold">
-                    تم تطبيق الخصم! وفرت {formattedSavings}
+                  <span className="text-emerald-300 font-semibold text-[11px] sm:text-xs">
+                    وفرت {formattedSavings}
                   </span>
                 </div>
                 <button
@@ -599,21 +601,21 @@ export const CheckoutModal: React.FC = () => {
         </div>
 
         {/* STEP 2: Payment Method Selector & One-Click Copy */}
-        <div className="space-y-4 p-4 rounded-2xl bg-slate-900/50 border border-slate-800">
+        <div className="space-y-3 p-3 sm:p-4 rounded-2xl bg-slate-900/50 border border-slate-800 w-full">
           <div className="text-xs font-bold text-slate-200 flex items-center justify-between pb-2 border-b border-slate-800/80">
             <div className="flex items-center gap-1.5">
-              <span className="h-5 w-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px]">
+              <span className="h-5 w-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px] flex-shrink-0">
                 2
               </span>
-              اختر وسيلة الدفع وبيانات التحويل
+              اختر وسيلة الدفع
             </div>
             <span className="text-[11px] text-emerald-400 font-semibold">
-              المبلغ المطلوب: {formattedFinalPrice}
+              المطلوب: {formattedFinalPrice}
             </span>
           </div>
 
-          {/* Payment Tabs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {/* Payment Tabs: 1 col on xs, 2 cols on sm */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
             {dynamicPaymentOptions.map((method) => {
               const isSelected = paymentMethod === method.id;
               const Icon = ICONS_MAP[method.iconName] || CreditCard;
@@ -626,26 +628,26 @@ export const CheckoutModal: React.FC = () => {
                     setPaymentMethod(method.id);
                     setCopiedAccount(false);
                   }}
-                  className={`flex items-start justify-between p-3 rounded-xl border text-right transition-all ${
+                  className={`flex items-start justify-between p-2.5 sm:p-3 rounded-xl border text-right transition-all w-full active:scale-[0.99] ${
                     isSelected
                       ? 'bg-indigo-600/15 border-indigo-500 text-white shadow-md ring-1 ring-indigo-500'
                       : 'bg-slate-950/40 border-slate-800 hover:border-slate-700 text-slate-300'
                   }`}
                 >
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2 min-w-0">
                     <div
-                      className={`p-2 rounded-lg ${
+                      className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${
                         isSelected ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-900 text-slate-400'
                       }`}
                     >
-                      <Icon className="h-4 w-4" />
+                      <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </div>
-                    <div>
-                      <div className="font-bold text-xs sm:text-sm text-slate-100">{method.nameAr}</div>
-                      <div className="text-[10px] text-slate-400">{method.nameEn}</div>
+                    <div className="min-w-0 truncate">
+                      <div className="font-bold text-xs text-slate-100 truncate">{method.nameAr}</div>
+                      <div className="text-[10px] text-slate-400 truncate">{method.nameEn}</div>
                     </div>
                   </div>
-                  <Badge variant={isSelected ? 'purple' : 'outline'} size="sm">
+                  <Badge variant={isSelected ? 'purple' : 'outline'} size="sm" className="flex-shrink-0 text-[10px]">
                     {method.badge}
                   </Badge>
                 </button>
@@ -654,20 +656,20 @@ export const CheckoutModal: React.FC = () => {
           </div>
 
           {/* Selected Method Details & One-Click Copy Box */}
-          <div className="p-4 rounded-2xl bg-slate-950 border border-indigo-500/20 space-y-3">
+          <div className="p-3 sm:p-4 rounded-2xl bg-slate-950 border border-indigo-500/20 space-y-2.5 w-full">
             <div className="flex items-center justify-between text-xs text-slate-300">
-              <span className="font-semibold text-indigo-300">
+              <span className="font-semibold text-indigo-300 text-[11px] sm:text-xs">
                 بيانات التحويل ({selectedPayment.nameAr}):
               </span>
               {selectedPayment.beneficiaryName && (
-                <span className="text-[11px] text-slate-400">
+                <span className="text-[10px] sm:text-[11px] text-slate-400">
                   باسم: <strong className="text-slate-200">{selectedPayment.beneficiaryName}</strong>
                 </span>
               )}
             </div>
 
             {/* Account Number Box with Copy Action */}
-            <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900 border border-slate-800 font-mono">
+            <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900 border border-slate-800 font-mono w-full">
               <span className="text-xs sm:text-sm font-bold text-emerald-400 select-all break-all" dir="ltr">
                 {selectedPayment.accountValue}
               </span>
@@ -677,17 +679,17 @@ export const CheckoutModal: React.FC = () => {
                 variant={copiedAccount ? 'secondary' : 'glass'}
                 size="sm"
                 onClick={handleCopyAccount}
-                className="text-xs font-semibold px-3 py-1.5 h-8 gap-1 flex-shrink-0"
+                className="text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 h-8 gap-1 flex-shrink-0"
               >
                 {copiedAccount ? (
                   <>
                     <Check className="h-3.5 w-3.5 text-emerald-400" />
-                    <span className="text-emerald-400">تم النسخ!</span>
+                    <span className="text-emerald-400">تم النسخ</span>
                   </>
                 ) : (
                   <>
                     <Copy className="h-3.5 w-3.5" />
-                    <span>نسخ رقم الحساب</span>
+                    <span>نسخ</span>
                   </>
                 )}
               </Button>
@@ -696,9 +698,9 @@ export const CheckoutModal: React.FC = () => {
         </div>
 
         {/* STEP 3: Payment Proof Uploader */}
-        <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800">
-          <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5 pb-2 mb-3 border-b border-slate-800/80">
-            <span className="h-5 w-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px]">
+        <div className="p-3 sm:p-4 rounded-2xl bg-slate-900/50 border border-slate-800 w-full">
+          <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5 pb-2 mb-2.5 border-b border-slate-800/80">
+            <span className="h-5 w-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px] flex-shrink-0">
               3
             </span>
             إرفاق سند الدفع (Proof of Payment)
@@ -711,84 +713,84 @@ export const CheckoutModal: React.FC = () => {
         </div>
 
         {/* STEP 4: Smart Conversion Buttons (3 Channels) */}
-        <div className="space-y-3 pt-2">
-          <div className="text-xs font-bold text-slate-300 flex items-center gap-1.5 mb-2">
-            <span className="h-5 w-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px]">
+        <div className="space-y-2.5 pt-1 w-full">
+          <div className="text-xs font-bold text-slate-300 flex items-center gap-1.5 mb-1.5">
+            <span className="h-5 w-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px] flex-shrink-0">
               4
             </span>
-            اختر قناة الإرسال والتأكيد الفوري:
+            اختر قناة الإرسال والتأكيد:
           </div>
 
-          {/* Toast Notification Alert for Instagram Redirection */}
+          {/* Toast Alert */}
           {toastMessage && (
             <div className="p-3 rounded-xl bg-purple-600/20 border border-purple-500/40 text-purple-200 text-xs font-semibold flex items-center gap-2 animate-bounce">
-              <Check className="h-4 w-4 text-emerald-400" />
+              <Check className="h-4 w-4 text-emerald-400 flex-shrink-0" />
               <span>{toastMessage}</span>
             </div>
           )}
 
-          {/* 🟢 WhatsApp Conversion Button */}
+          {/* 🟢 WhatsApp */}
           <button
             type="button"
             disabled={isProcessing}
             onClick={handleWhatsAppCheckout}
-            className="w-full flex items-center justify-between p-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-emerald-600/25 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed group"
+            className="w-full flex items-center justify-between p-3 sm:p-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-emerald-600/25 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed group"
           >
-            <div className="flex items-center gap-2.5">
-              <div className="h-7 w-7 rounded-lg bg-white/20 flex items-center justify-center">
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <div className="h-7 w-7 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
                 {isProcessing ? (
                   <Loader2 className="h-4 w-4 text-white animate-spin" />
                 ) : (
                   <MessageCircle className="h-4 w-4 text-white" />
                 )}
               </div>
-              <span>إتمام الطلب عبر واتساب (WhatsApp)</span>
+              <span className="text-xs sm:text-sm">إتمام الطلب عبر واتساب (WhatsApp)</span>
             </div>
-            <span className="text-[11px] bg-white/10 px-2 py-0.5 rounded-md font-normal group-hover:bg-white/20">
+            <span className="text-[10px] sm:text-[11px] bg-white/10 px-2 py-0.5 rounded-md font-normal flex-shrink-0">
               تفعيل فوري ⚡
             </span>
           </button>
 
-          {/* 🔵 Telegram Conversion Button */}
+          {/* 🔵 Telegram */}
           <button
             type="button"
             disabled={isProcessing}
             onClick={handleTelegramCheckout}
-            className="w-full flex items-center justify-between p-3.5 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-sky-600/25 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed group"
+            className="w-full flex items-center justify-between p-3 sm:p-3.5 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-sky-600/25 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed group"
           >
-            <div className="flex items-center gap-2.5">
-              <div className="h-7 w-7 rounded-lg bg-white/20 flex items-center justify-center">
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <div className="h-7 w-7 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
                 {isProcessing ? (
                   <Loader2 className="h-4 w-4 text-white animate-spin" />
                 ) : (
                   <Send className="h-4 w-4 text-white" />
                 )}
               </div>
-              <span>إتمام الطلب عبر تليجرام (Telegram)</span>
+              <span className="text-xs sm:text-sm">إتمام الطلب عبر تليجرام (Telegram)</span>
             </div>
-            <span className="text-[11px] bg-white/10 px-2 py-0.5 rounded-md font-normal group-hover:bg-white/20">
+            <span className="text-[10px] sm:text-[11px] bg-white/10 px-2 py-0.5 rounded-md font-normal flex-shrink-0">
               دعم آلي 🤖
             </span>
           </button>
 
-          {/* 🟣 Instagram Conversion Button */}
+          {/* 🟣 Instagram */}
           <button
             type="button"
             disabled={isProcessing}
             onClick={handleInstagramCheckout}
-            className="w-full flex items-center justify-between p-3.5 rounded-xl bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-pink-600/25 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed group"
+            className="w-full flex items-center justify-between p-3 sm:p-3.5 rounded-xl bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-pink-600/25 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed group"
           >
-            <div className="flex items-center gap-2.5">
-              <div className="h-7 w-7 rounded-lg bg-white/20 flex items-center justify-center">
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <div className="h-7 w-7 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
                 {isProcessing ? (
                   <Loader2 className="h-4 w-4 text-white animate-spin" />
                 ) : (
                   <Instagram className="h-4 w-4 text-white" />
                 )}
               </div>
-              <span>إتمام الطلب عبر إنستغرام (Instagram Direct)</span>
+              <span className="text-xs sm:text-sm">إتمام الطلب عبر إنستغرام (Direct)</span>
             </div>
-            <span className="text-[11px] bg-white/10 px-2 py-0.5 rounded-md font-normal group-hover:bg-white/20">
+            <span className="text-[10px] sm:text-[11px] bg-white/10 px-2 py-0.5 rounded-md font-normal flex-shrink-0">
               نسخ الفاتورة 📋
             </span>
           </button>

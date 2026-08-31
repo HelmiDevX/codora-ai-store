@@ -2,59 +2,116 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Coupon, CouponValidationResult } from '@/types/coupon';
 import { MOCK_COUPONS } from '@/data/mock-coupons';
+import { 
+  fetchCouponsFromSupabase, 
+  upsertCouponToSupabase, 
+  deleteCouponFromSupabase, 
+  subscribeToSupabaseChanges 
+} from '@/lib/supabase';
 
 interface CouponsStoreState {
   coupons: Record<string, Coupon>;
-  addCoupon: (coupon: Coupon) => void;
-  toggleCouponActive: (code: string) => void;
-  deleteCoupon: (code: string) => void;
+  isLoading: boolean;
+  fetchInitialData: () => Promise<void>;
+  addCoupon: (coupon: Coupon) => Promise<void>;
+  toggleCouponActive: (code: string) => Promise<void>;
+  deleteCoupon: (code: string) => Promise<void>;
   incrementCouponUsage: (code: string, orderRevenueUSD: number) => void;
   validateCouponCode: (code: string, basePriceUSD: number) => CouponValidationResult;
   resetCoupons: () => void;
 }
 
+let isCouponsSubscribed = false;
+
 export const useCouponsStore = create<CouponsStoreState>()(
   persist(
     (set, get) => ({
       coupons: MOCK_COUPONS,
+      isLoading: false,
 
-      addCoupon: (coupon) => {
+      fetchInitialData: async () => {
+        set({ isLoading: true });
+        try {
+          const liveCoupons = await fetchCouponsFromSupabase();
+          if (liveCoupons && Object.keys(liveCoupons).length > 0) {
+            set({ 
+              coupons: liveCoupons, 
+              isLoading: false 
+            });
+          } else {
+            set({ isLoading: false });
+          }
+
+          if (!isCouponsSubscribed && typeof window !== 'undefined') {
+            isCouponsSubscribed = true;
+            subscribeToSupabaseChanges('coupons', async () => {
+              const refreshed = await fetchCouponsFromSupabase();
+              if (refreshed && Object.keys(refreshed).length > 0) {
+                set({ coupons: refreshed });
+              }
+            });
+          }
+        } catch (err) {
+          console.warn('[Coupons Store Hydration Error]', err);
+          set({ isLoading: false });
+        }
+      },
+
+      addCoupon: async (coupon) => {
         const cleanCode = coupon.code.trim().toUpperCase();
+        const formattedCoupon = {
+          ...coupon,
+          code: cleanCode,
+        };
+
+        // 1. Optimistic update
         set((state) => ({
           coupons: {
             ...state.coupons,
-            [cleanCode]: {
-              ...coupon,
-              code: cleanCode,
-            },
+            [cleanCode]: formattedCoupon,
           },
         }));
+
+        // 2. Direct Supabase Query
+        await upsertCouponToSupabase(formattedCoupon);
       },
 
-      toggleCouponActive: (code) => {
+      toggleCouponActive: async (code) => {
         const cleanCode = code.trim().toUpperCase();
+        let targetCoupon: Coupon | undefined;
+
         set((state) => {
           const existing = state.coupons[cleanCode];
           if (!existing) return state;
+          targetCoupon = {
+            ...existing,
+            isActive: !existing.isActive,
+          };
           return {
             coupons: {
               ...state.coupons,
-              [cleanCode]: {
-                ...existing,
-                isActive: !existing.isActive,
-              },
+              [cleanCode]: targetCoupon,
             },
           };
         });
+
+        if (targetCoupon) {
+          await upsertCouponToSupabase(targetCoupon);
+        }
       },
 
-      deleteCoupon: (code) => {
+      deleteCoupon: async (code) => {
         const cleanCode = code.trim().toUpperCase();
+
+        // 1. Optimistic update
         set((state) => {
           const updated = { ...state.coupons };
           delete updated[cleanCode];
           return { coupons: updated };
         });
+
+        // 2. Direct Supabase Query
+        await deleteCouponFromSupabase(cleanCode);
       },
 
       incrementCouponUsage: (code, orderRevenueUSD) => {
@@ -140,11 +197,9 @@ export const useCouponsStore = create<CouponsStoreState>()(
         if (coupon.discountType === 'percentage') {
           discountAmountUSD = (basePriceUSD * Number(coupon.discountValue)) / 100;
         } else {
-          // fixed or fixed_usd
           discountAmountUSD = Number(coupon.discountValue);
         }
 
-        // Never exceed base price (cannot drop below 0)
         discountAmountUSD = Math.min(discountAmountUSD, basePriceUSD);
         discountAmountUSD = Math.max(0, discountAmountUSD);
         const finalPriceUSD = Math.max(0, basePriceUSD - discountAmountUSD);
@@ -162,7 +217,7 @@ export const useCouponsStore = create<CouponsStoreState>()(
       },
     }),
     {
-      name: 'codora_coupons_store_v1',
+      name: 'codora_coupons_store_v2',
     }
   )
 );

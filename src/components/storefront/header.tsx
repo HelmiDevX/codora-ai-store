@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { CurrencySelector } from '@/components/checkout/currency-selector';
-import { Bot, MessageCircle, PhoneCall, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Bot, MessageCircle, PhoneCall, ExternalLink, ShieldCheck, Headphones } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useStoreSettings } from '@/store/use-store-settings';
@@ -16,45 +16,45 @@ export const Header: React.FC = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-indigo-500/10 bg-slate-950/80 backdrop-blur-2xl transition-all">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
+      <header className="sticky top-0 z-40 w-full border-b border-indigo-500/10 bg-slate-950/85 backdrop-blur-2xl transition-all">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2">
           {/* Logo & Store Name */}
-          <Link href="/" className="flex items-center gap-3 group">
+          <Link href="/" className="flex items-center gap-2 sm:gap-3 group flex-shrink-0">
             <div className="relative">
-              <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-75 blur-sm group-hover:opacity-100 transition duration-300" />
-              <div className="relative h-11 w-11 rounded-2xl bg-slate-950 border border-white/10 flex items-center justify-center">
-                <Bot className="h-6 w-6 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
+              <div className="absolute -inset-0.5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-75 blur-xs sm:blur-sm group-hover:opacity-100 transition duration-300" />
+              <div className="relative h-9 w-9 sm:h-11 sm:w-11 rounded-xl sm:rounded-2xl bg-slate-950 border border-white/10 flex items-center justify-center">
+                <Bot className="h-5 w-5 sm:h-6 sm:w-6 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
               </div>
             </div>
 
             <div>
-              <div className="font-black text-lg sm:text-xl text-white tracking-tight flex items-center gap-1.5">
+              <div className="font-black text-sm sm:text-lg text-white tracking-tight flex items-center gap-1">
                 <span>كودورا</span>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 font-extrabold">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 font-extrabold text-xs sm:text-base">
                   AI STORE
                 </span>
               </div>
-              <div className="text-[11px] text-slate-400 font-medium">
+              <div className="text-[9px] sm:text-[11px] text-slate-400 font-medium hidden xs:block">
                 متجر اشتراكات وأدوات الذكاء الاصطناعي
               </div>
             </div>
           </Link>
 
           {/* Right Action Controls */}
-          <div className="flex items-center gap-2.5 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
             {/* Multi-Currency Dropdown */}
-            <CurrencySelector />
+            <CurrencySelector compact />
 
             {/* Contact Support Button */}
             <Button
               variant="secondary"
               size="sm"
               onClick={() => setSupportModalOpen(true)}
-              className="border-indigo-500/30 hover:border-indigo-500/60 bg-indigo-950/40 text-indigo-200 hover:text-white transition-all shadow-sm text-xs font-semibold py-2 px-3 sm:px-4"
+              className="border-indigo-500/30 hover:border-indigo-500/60 bg-indigo-950/40 text-indigo-200 hover:text-white transition-all shadow-sm text-xs font-semibold py-2 px-2.5 sm:px-4 h-9 sm:h-10"
             >
-              <MessageCircle className="h-4 w-4 text-indigo-400 ml-1.5" />
+              <Headphones className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-indigo-400 sm:ml-1.5" />
               <span className="hidden sm:inline">تواصل مع الدعم الفني</span>
-              <span className="sm:hidden">الدعم</span>
+              <span className="sm:hidden text-[11px]">الدعم</span>
             </Button>
           </div>
         </div>
@@ -69,7 +69,7 @@ export const Header: React.FC = () => {
         description="فريقنا متواجد على مدار 24 ساعة للإجابة على استفساراتك وتفعيل الطلبات"
       >
         <div className="space-y-4 py-2">
-          <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2.5">
             <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400">
               <ShieldCheck className="h-4 w-4" />
               ضمان تفعيل فوري ومتابعة مباشرة
@@ -84,7 +84,7 @@ export const Header: React.FC = () => {
               href={`https://wa.me/${cleanWhatsapp}?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D8%A3%D8%B1%D9%8A%D8%AF%20%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%B9%D9%86%20%D8%AE%D8%AF%D9%85%D8%A7%D8%AA%20%D9%85%D8%AA%D8%AC%D8%B1%20%D9%83%D9%88%D8%AF%D9%88%D8%B1%D8%A7%20AI`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-between p-3.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/30 text-emerald-200 transition-all text-xs font-semibold group"
+              className="flex items-center justify-between p-3 sm:p-3.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/30 text-emerald-200 transition-all text-xs font-semibold group active:scale-[0.98]"
             >
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400">
@@ -99,7 +99,7 @@ export const Header: React.FC = () => {
               href={`https://t.me/${telegramUsername}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-between p-3.5 rounded-xl bg-sky-950/40 hover:bg-sky-900/50 border border-sky-500/30 text-sky-200 transition-all text-xs font-semibold group"
+              className="flex items-center justify-between p-3 sm:p-3.5 rounded-xl bg-sky-950/40 hover:bg-sky-900/50 border border-sky-500/30 text-sky-200 transition-all text-xs font-semibold group active:scale-[0.98]"
             >
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-lg bg-sky-500/20 text-sky-400">
@@ -112,7 +112,7 @@ export const Header: React.FC = () => {
           </div>
 
           <div className="pt-2">
-            <Button variant="secondary" onClick={() => setSupportModalOpen(false)} className="w-full text-xs">
+            <Button variant="secondary" onClick={() => setSupportModalOpen(false)} className="w-full text-xs py-3">
               إغلاق
             </Button>
           </div>
