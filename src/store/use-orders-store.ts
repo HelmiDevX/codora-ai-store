@@ -3,6 +3,13 @@ import { persist } from 'zustand/middleware';
 import { OrderPayload, OrderStatus } from '@/types/order';
 import { MOCK_PRODUCTS } from '@/data/mock-products';
 import { soundManager } from '@/lib/audio';
+import { 
+  fetchOrdersFromSupabase, 
+  syncOrderToSupabase, 
+  updateOrderStatusInSupabase, 
+  deleteOrderFromSupabase, 
+  subscribeToSupabaseChanges 
+} from '@/lib/supabase';
 
 const INITIAL_ORDERS: OrderPayload[] = [
   {
@@ -99,37 +106,87 @@ const INITIAL_ORDERS: OrderPayload[] = [
 interface OrdersStoreState {
   orders: OrderPayload[];
   latestIncomingOrder: OrderPayload | null;
-  addOrder: (order: OrderPayload) => void;
-  updateOrderStatus: (orderId: string, status: OrderStatus) => void;
-  deleteOrder: (orderId: string) => void;
+  isLoading: boolean;
+  fetchInitialData: () => Promise<void>;
+  addOrder: (order: OrderPayload) => Promise<{ success: boolean; error?: string }>;
+  updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<{ success: boolean; error?: string }>;
+  deleteOrder: (orderId: string) => Promise<{ success: boolean; error?: string }>;
   clearLatestIncomingOrder: () => void;
   resetOrders: () => void;
 }
+
+let isOrdersSubscribed = false;
 
 export const useOrdersStore = create<OrdersStoreState>()(
   persist(
     (set, get) => ({
       orders: INITIAL_ORDERS,
       latestIncomingOrder: null,
+      isLoading: true,
 
-      addOrder: (newOrder) => {
+      fetchInitialData: async () => {
+        set({ isLoading: true });
+        try {
+          const liveOrders = await fetchOrdersFromSupabase();
+          if (liveOrders && liveOrders.length > 0) {
+            set({ orders: liveOrders, isLoading: false });
+          } else {
+            set({ isLoading: false });
+          }
+
+          // Realtime Subscription across all devices
+          if (!isOrdersSubscribed && typeof window !== 'undefined') {
+            isOrdersSubscribed = true;
+            subscribeToSupabaseChanges('orders', async (payload) => {
+              const refreshed = await fetchOrdersFromSupabase();
+              if (refreshed && refreshed.length > 0) {
+                set({ orders: refreshed });
+              }
+
+              if (payload?.eventType === 'INSERT' && payload?.new) {
+                const newRow = payload.new;
+                const newOrder = refreshed?.find((o) => o.id === newRow.id);
+                if (newOrder) {
+                  set({ latestIncomingOrder: newOrder });
+                  soundManager.playChannelSound(newOrder.channel);
+                }
+              }
+            });
+          }
+        } catch (err) {
+          console.warn('[Orders Store Hydration Error]', err);
+          set({ isLoading: false });
+        }
+      },
+
+      addOrder: async (newOrder) => {
+        // 1. Direct Supabase Query first
+        const res = await syncOrderToSupabase(newOrder);
+
+        // 2. Update local state
         set((state) => ({
-          orders: [newOrder, ...state.orders],
+          orders: [newOrder, ...state.orders.filter((o) => o.id !== newOrder.id)],
           latestIncomingOrder: newOrder,
         }));
 
-        // Broadcast cross-tab event if supported
+        // 3. Cross-tab fallback notification
         if (typeof window !== 'undefined') {
           try {
             const channel = new BroadcastChannel('codora_orders_channel');
             channel.postMessage({ type: 'NEW_ORDER', order: newOrder });
           } catch (e) {
-            // Fallback for older browsers
+            // ignore
           }
         }
+
+        return { success: res.success, error: res.error || undefined };
       },
 
-      updateOrderStatus: (orderId, status) => {
+      updateOrderStatus: async (orderId, status) => {
+        // 1. Sync to Supabase
+        const res = await updateOrderStatusInSupabase(orderId, status);
+
+        // 2. Update local state
         set((state) => ({
           orders: state.orders.map((o) =>
             o.id === orderId
@@ -137,12 +194,20 @@ export const useOrdersStore = create<OrdersStoreState>()(
               : o
           ),
         }));
+
+        return { success: res.success, error: res.error || undefined };
       },
 
-      deleteOrder: (orderId) => {
+      deleteOrder: async (orderId) => {
+        // 1. Sync to Supabase
+        const res = await deleteOrderFromSupabase(orderId);
+
+        // 2. Update local state
         set((state) => ({
           orders: state.orders.filter((o) => o.id !== orderId),
         }));
+
+        return { success: res.success, error: res.error || undefined };
       },
 
       clearLatestIncomingOrder: () => {

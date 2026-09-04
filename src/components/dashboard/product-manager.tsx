@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useCurrencyStore } from '@/store/use-currency-store';
 import { soundManager } from '@/lib/audio';
+import { generateUUID } from '@/lib/supabase';
 
 export const ProductManager: React.FC = () => {
   const { 
@@ -72,7 +73,7 @@ export const ProductManager: React.FC = () => {
     setErrorMessage(null);
 
     const newProd: Product = {
-      id: `prod_${Date.now()}`,
+      id: generateUUID(),
       slug: newTitle.toLowerCase().replace(/\s+/g, '-'),
       title: newTitle,
       titleAr: newTitle,

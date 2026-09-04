@@ -41,7 +41,8 @@ import {
   uploadReceiptImage, 
   syncOrderToSupabase, 
   fetchCouponFromSupabase, 
-  incrementCouponUsageInSupabase 
+  incrementCouponUsageInSupabase,
+  generateUUID 
 } from '@/lib/supabase';
 
 const ICONS_MAP = {
@@ -288,7 +289,7 @@ export const CheckoutModal: React.FC = () => {
     }
 
     const newOrder: OrderPayload = {
-      id: `ord_${Date.now()}`,
+      id: generateUUID(),
       orderNumber,
       item: {
         product: selectedProduct,

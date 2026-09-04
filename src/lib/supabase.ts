@@ -1,126 +1,193 @@
 import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
-import { OrderPayload } from '@/types/order';
+import { OrderPayload, OrderStatus } from '@/types/order';
 import { Product } from '@/types/product';
 import { Coupon } from '@/types/coupon';
 import { ExchangeRatesMap } from '@/types/currency';
 import { StoreSettings } from '@/store/use-store-settings';
+import { MOCK_PRODUCTS } from '@/data/mock-products';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-let supabaseInstance: SupabaseClient | null = null;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://hhxjcnfmhrgddgrkykie.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_SElZOAUH9tuOsZQNCQ-6Ig_nCApzcHV';
 
 /**
- * Safely retrieves or initializes the Supabase client instance.
- * Returns null if credentials are invalid or missing, preventing runtime crashes.
+ * Direct Supabase Client export initialized with environment variables
+ * and reliable fallback credentials.
  */
-export function getSupabaseClient(): SupabaseClient | null {
-  if (typeof window === 'undefined') return null;
+export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
+});
 
-  if (supabaseInstance) return supabaseInstance;
-
-  try {
-    if (supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http')) {
-      supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        },
-      });
-      return supabaseInstance;
-    }
-  } catch (error) {
-    console.warn('[Supabase Init Warning] Could not initialize Supabase client:', error);
-  }
-
-  return null;
+/**
+ * Returns the Supabase client instance.
+ */
+export function getSupabaseClient(): SupabaseClient {
+  return supabase;
 }
 
 /* =========================================================================
-   PRODUCTS (CRUD + Fetch)
+   UUID UTILITIES
+========================================================================= */
+
+export function isValidUUID(str: string): boolean {
+  if (!str || typeof str !== 'string') return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+}
+
+export function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+function getThumbnailForCategory(category?: string, title?: string): string {
+  const cleanTitle = (title || '').toLowerCase();
+  if (cleanTitle.includes('chatgpt') || cleanTitle.includes('gpt')) {
+    return 'https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=800&q=80';
+  }
+  if (cleanTitle.includes('midjourney')) {
+    return 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?auto=format&fit=crop&w=800&q=80';
+  }
+  if (cleanTitle.includes('claude')) {
+    return 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80';
+  }
+  if (cleanTitle.includes('canva')) {
+    return 'https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&w=800&q=80';
+  }
+  if (cleanTitle.includes('cursor')) {
+    return 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=800&q=80';
+  }
+  if (category === 'course' || cleanTitle.includes('كورس') || cleanTitle.includes('course')) {
+    return 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80';
+  }
+  return 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80';
+}
+
+function mapRowsToProducts(rows: any[]): Product[] {
+  return rows.map((row: any): Product => {
+    // Find matching mock product to preserve rich tags/features if available
+    const matchedMock = MOCK_PRODUCTS.find(
+      (m) => m.titleAr.toLowerCase() === (row.title || '').toLowerCase() || m.title.toLowerCase() === (row.title || '').toLowerCase()
+    );
+
+    return {
+      id: row.id,
+      slug: row.id,
+      title: row.title || 'منتج ذكاء اصطناعي',
+      titleAr: row.title || 'منتج ذكاء اصطناعي',
+      shortDescription: row.description || matchedMock?.shortDescription || '',
+      shortDescriptionAr: row.description || matchedMock?.shortDescriptionAr || '',
+      fullDescription: row.description || matchedMock?.fullDescription || '',
+      fullDescriptionAr: row.description || matchedMock?.fullDescriptionAr || '',
+      category: (row.category as any) || matchedMock?.category || 'ai-subscription',
+      tier: matchedMock?.tier || 'monthly',
+      priceUSD: Number(row.price_usd || 0),
+      badgeText: matchedMock?.badgeText,
+      badgeTextAr: matchedMock?.badgeTextAr,
+      isPopular: matchedMock?.isPopular || false,
+      isAvailable: row.is_active !== undefined ? Boolean(row.is_active) : true,
+      instantDelivery: true,
+      thumbnailUrl: matchedMock?.thumbnailUrl || getThumbnailForCategory(row.category, row.title),
+      features: matchedMock?.features || [
+        { id: 'f1', title: 'Full Warranty', titleAr: 'ضمان كامل ومستمر طوال المدة', included: true },
+        { id: 'f2', title: 'Instant Activation', titleAr: 'تسليم وتفعيل فوري على مدار 24 ساعة', included: true },
+      ],
+      metadata: {
+        platform: matchedMock?.metadata?.platform || 'OpenAI',
+        duration: row.duration || matchedMock?.metadata?.duration || '1 Month',
+        durationAr: row.duration || matchedMock?.metadata?.durationAr || 'شهر كامل (30 يوم)',
+        accessType: (row.delivery_type as any) || matchedMock?.metadata?.accessType || 'Shared Account',
+      },
+    };
+  });
+}
+
+/* =========================================================================
+   PRODUCTS (CRUD + Fetch + Seed)
 ========================================================================= */
 
 export async function fetchProductsFromSupabase(): Promise<Product[] | null> {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) return null;
-
     const { data, error } = await supabase
       .from('products')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error || !data || data.length === 0) {
-      if (error) console.warn('[Supabase Products Fetch Error]', error.message);
+    if (error) {
+      console.warn('[Supabase Products Fetch Error]', error.message);
       return null;
     }
 
-    return data.map((row: any): Product => ({
-      id: row.id,
-      slug: row.slug || row.id,
-      title: row.title || row.title_ar,
-      titleAr: row.title_ar || row.title,
-      shortDescription: row.short_description || '',
-      shortDescriptionAr: row.short_description_ar || row.short_description || '',
-      fullDescription: row.full_description || '',
-      fullDescriptionAr: row.full_description_ar || '',
-      category: row.category || 'ai-subscription',
-      tier: row.tier || 'monthly',
-      priceUSD: Number(row.price_usd || row.price || 0),
-      badgeTextAr: row.badge_text_ar || undefined,
-      isPopular: Boolean(row.is_popular),
-      isAvailable: row.is_available !== undefined ? Boolean(row.is_available) : true,
-      instantDelivery: row.instant_delivery !== undefined ? Boolean(row.instant_delivery) : true,
-      thumbnailUrl: row.thumbnail_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
-      features: Array.isArray(row.features)
-        ? row.features
-        : typeof row.features === 'string'
-        ? JSON.parse(row.features)
-        : [
-            { id: 'f1', title: 'Full Warranty', titleAr: 'ضمان كامل ومستمر طوال المدة', included: true },
-            { id: 'f2', title: 'Instant Activation', titleAr: 'تسليم وتفعيل فوري على مدار 24 ساعة', included: true },
-          ],
-      metadata: row.metadata && typeof row.metadata === 'object' ? row.metadata : {},
-    }));
+    // If Supabase table is empty, auto-seed with default catalog
+    if (!data || data.length === 0) {
+      console.log('[Supabase Products] Table is empty. Auto-seeding default products...');
+      return await seedDefaultProductsToSupabase();
+    }
+
+    return mapRowsToProducts(data);
   } catch (err) {
     console.warn('[Supabase Products Fetch Exception]', err);
     return null;
   }
 }
 
-export async function upsertProductToSupabase(product: Product): Promise<{ success: boolean; error: string | null }> {
+export async function seedDefaultProductsToSupabase(): Promise<Product[]> {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) return { success: false, error: 'Supabase client not initialized' };
+    const seedRows = MOCK_PRODUCTS.map((p) => ({
+      id: generateUUID(),
+      title: p.titleAr || p.title,
+      description: p.fullDescriptionAr || p.shortDescriptionAr || p.fullDescription || p.shortDescription,
+      price_usd: p.priceUSD,
+      category: p.category,
+      is_active: p.isAvailable,
+      duration: p.metadata?.durationAr || 'شهر كامل (30 يوم)',
+      delivery_type: p.metadata?.accessType || 'Shared Account',
+      created_at: new Date().toISOString(),
+    }));
 
+    const { data, error } = await supabase.from('products').insert(seedRows).select();
+    if (error || !data || data.length === 0) {
+      console.warn('[Supabase Seeding Warning]', error?.message);
+      return MOCK_PRODUCTS;
+    }
+
+    return mapRowsToProducts(data);
+  } catch (err) {
+    console.warn('[Supabase Seeding Exception]', err);
+    return MOCK_PRODUCTS;
+  }
+}
+
+export async function upsertProductToSupabase(product: Product): Promise<{ success: boolean; error: string | null; id?: string }> {
+  try {
+    const targetId = isValidUUID(product.id) ? product.id : generateUUID();
     const row = {
-      id: product.id,
-      slug: product.slug,
-      title: product.title,
-      title_ar: product.titleAr,
-      short_description: product.shortDescription,
-      short_description_ar: product.shortDescriptionAr,
-      full_description: product.fullDescription,
-      full_description_ar: product.fullDescriptionAr,
-      category: product.category,
-      tier: product.tier,
-      price_usd: product.priceUSD,
-      badge_text_ar: product.badgeTextAr || null,
-      is_popular: Boolean(product.isPopular),
-      is_available: product.isAvailable,
-      instant_delivery: product.instantDelivery,
-      thumbnail_url: product.thumbnailUrl,
-      features: product.features,
-      metadata: product.metadata,
-      updated_at: new Date().toISOString(),
+      id: targetId,
+      title: product.titleAr || product.title,
+      description: product.fullDescriptionAr || product.shortDescriptionAr || product.fullDescription || product.shortDescription || '',
+      price_usd: Number(product.priceUSD || 0),
+      category: product.category || 'ai-subscription',
+      is_active: product.isAvailable !== undefined ? Boolean(product.isAvailable) : true,
+      duration: product.metadata?.durationAr || 'شهر كامل (30 يوم)',
+      delivery_type: product.metadata?.accessType || 'Shared Account',
     };
 
-    const { error } = await supabase.from('products').upsert(row, { onConflict: 'id' });
+    const { error } = await supabase
+      .from('products')
+      .upsert(row, { onConflict: 'id' });
+
     if (error) {
       console.error('[Supabase Upsert Product Error]', error.message);
       return { success: false, error: error.message };
     }
-    return { success: true, error: null };
+    return { success: true, error: null, id: targetId };
   } catch (err) {
     console.error('[Supabase Upsert Product Exception]', err);
     return { success: false, error: String(err) };
@@ -129,9 +196,6 @@ export async function upsertProductToSupabase(product: Product): Promise<{ succe
 
 export async function deleteProductFromSupabase(id: string): Promise<{ success: boolean; error: string | null }> {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) return { success: false, error: 'Supabase client not initialized' };
-
     const { error } = await supabase.from('products').delete().eq('id', id);
     if (error) {
       console.error('[Supabase Delete Product Error]', error.message);
@@ -150,12 +214,10 @@ export async function deleteProductFromSupabase(id: string): Promise<{ success: 
 
 export async function fetchExchangeRatesFromSupabase(): Promise<ExchangeRatesMap | null> {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) return null;
-
     const { data, error } = await supabase
       .from('exchange_rates')
       .select('*')
+      .limit(1)
       .maybeSingle();
 
     if (error || !data) {
@@ -163,20 +225,12 @@ export async function fetchExchangeRatesFromSupabase(): Promise<ExchangeRatesMap
       return null;
     }
 
-    if (data.rates && typeof data.rates === 'object') {
-      return data.rates as ExchangeRatesMap;
-    }
-
-    if (data.yer_aden || data.YER_ADEN) {
-      return {
-        USD: 1,
-        YER_ADEN: Number(data.yer_aden || data.YER_ADEN || 1650),
-        YER_SANAA: Number(data.yer_sanaa || data.YER_SANAA || 535),
-        SAR: Number(data.sar || data.SAR || 3.75),
-      };
-    }
-
-    return null;
+    return {
+      USD: 1,
+      YER_ADEN: Number(data.yer_new !== undefined ? data.yer_new : (data.yer_aden || 1650)),
+      YER_SANAA: Number(data.yer_old !== undefined ? data.yer_old : (data.yer_sanaa || 535)),
+      SAR: Number(data.sar || 3.75),
+    };
   } catch (err) {
     console.warn('[Supabase Exchange Rates Fetch Exception]', err);
     return null;
@@ -185,19 +239,28 @@ export async function fetchExchangeRatesFromSupabase(): Promise<ExchangeRatesMap
 
 export async function upsertExchangeRatesToSupabase(rates: ExchangeRatesMap): Promise<{ success: boolean; error: string | null }> {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) return { success: false, error: 'Supabase client not initialized' };
-
     const row = {
-      id: 1,
-      rates: rates,
-      yer_aden: rates.YER_ADEN,
-      yer_sanaa: rates.YER_SANAA,
-      sar: rates.SAR,
+      yer_new: Number(rates.YER_ADEN || 1650),
+      yer_old: Number(rates.YER_SANAA || 535),
+      sar: Number(rates.SAR || 3.75),
       updated_at: new Date().toISOString(),
     };
 
-    const { error } = await supabase.from('exchange_rates').upsert(row, { onConflict: 'id' });
+    const { data: existing } = await supabase
+      .from('exchange_rates')
+      .select('id')
+      .limit(1)
+      .maybeSingle();
+
+    let error;
+    if (existing && existing.id) {
+      const res = await supabase.from('exchange_rates').update(row).eq('id', existing.id);
+      error = res.error;
+    } else {
+      const res = await supabase.from('exchange_rates').insert([{ id: generateUUID(), ...row }]);
+      error = res.error;
+    }
+
     if (error) {
       console.error('[Supabase Upsert Exchange Rates Error]', error.message);
       return { success: false, error: error.message };
@@ -215,12 +278,10 @@ export async function upsertExchangeRatesToSupabase(rates: ExchangeRatesMap): Pr
 
 export async function fetchStoreSettingsFromSupabase(): Promise<StoreSettings | null> {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) return null;
-
     const { data, error } = await supabase
       .from('store_settings')
       .select('*')
+      .limit(1)
       .maybeSingle();
 
     if (error || !data) {
@@ -233,22 +294,22 @@ export async function fetchStoreSettingsFromSupabase(): Promise<StoreSettings | 
       telegramUsername: data.telegram_username || 'ai_store_support',
       instagramUsername: data.instagram_username || 'aistore_ye',
       adminPin: data.admin_pin || '2026',
-      paymentAccounts: data.payment_accounts || {
+      paymentAccounts: {
         kuraimi: {
-          accountNumber: data.kuraimi_account || '3001234567',
-          beneficiaryName: data.kuraimi_beneficiary || 'متجر الذكاء الاصطناعي',
+          accountNumber: data.kuraimi_acc || '3001234567',
+          beneficiaryName: data.kuraimi_name || 'متجر الذكاء الاصطناعي',
         },
         jeeb: {
           phoneNumber: data.jeeb_phone || '777123456',
-          beneficiaryName: data.jeeb_beneficiary || 'متجر كودورا AI',
+          beneficiaryName: data.jeeb_name || 'متجر كودورا AI',
         },
         qutaibi: {
-          accountNumber: data.qutaibi_account || '12345678',
-          beneficiaryName: data.qutaibi_beneficiary || 'مؤسسة كودورا للبرمجيات',
+          accountNumber: data.qutaibi_acc || '12345678',
+          beneficiaryName: data.qutaibi_name || 'مؤسسة كودورا للبرمجيات',
         },
         binance_usdt: {
           walletAddress: data.usdt_address || 'TXYZ1234567890USDTNetwork',
-          network: data.usdt_network || 'Tron (TRC-20)',
+          network: 'Tron (TRC-20)',
         },
       },
     };
@@ -260,20 +321,35 @@ export async function fetchStoreSettingsFromSupabase(): Promise<StoreSettings | 
 
 export async function upsertStoreSettingsToSupabase(settings: StoreSettings): Promise<{ success: boolean; error: string | null }> {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) return { success: false, error: 'Supabase client not initialized' };
-
     const row = {
-      id: 1,
       whatsapp_number: settings.whatsappNumber,
       telegram_username: settings.telegramUsername,
       instagram_username: settings.instagramUsername,
       admin_pin: settings.adminPin,
-      payment_accounts: settings.paymentAccounts,
-      updated_at: new Date().toISOString(),
+      kuraimi_acc: settings.paymentAccounts?.kuraimi?.accountNumber || '',
+      kuraimi_name: settings.paymentAccounts?.kuraimi?.beneficiaryName || '',
+      jeeb_phone: settings.paymentAccounts?.jeeb?.phoneNumber || '',
+      jeeb_name: settings.paymentAccounts?.jeeb?.beneficiaryName || '',
+      qutaibi_acc: settings.paymentAccounts?.qutaibi?.accountNumber || '',
+      qutaibi_name: settings.paymentAccounts?.qutaibi?.beneficiaryName || '',
+      usdt_address: settings.paymentAccounts?.binance_usdt?.walletAddress || '',
     };
 
-    const { error } = await supabase.from('store_settings').upsert(row, { onConflict: 'id' });
+    const { data: existing } = await supabase
+      .from('store_settings')
+      .select('id')
+      .limit(1)
+      .maybeSingle();
+
+    let error;
+    if (existing && existing.id) {
+      const res = await supabase.from('store_settings').update(row).eq('id', existing.id);
+      error = res.error;
+    } else {
+      const res = await supabase.from('store_settings').insert([{ id: generateUUID(), ...row }]);
+      error = res.error;
+    }
+
     if (error) {
       console.error('[Supabase Upsert Store Settings Error]', error.message);
       return { success: false, error: error.message };
@@ -291,9 +367,6 @@ export async function upsertStoreSettingsToSupabase(settings: StoreSettings): Pr
 
 export async function fetchCouponsFromSupabase(): Promise<Record<string, Coupon> | null> {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) return null;
-
     const { data, error } = await supabase
       .from('coupons')
       .select('*')
@@ -312,14 +385,9 @@ export async function fetchCouponsFromSupabase(): Promise<Record<string, Coupon>
       map[cleanCode] = {
         code: cleanCode,
         discountType: (row.discount_type === 'percentage' || row.discount_type === 'percent') ? 'percentage' : 'fixed_usd',
-        discountValue: Number(row.discount_value || row.discount_amount || 0),
-        affiliateName: row.affiliate_name || row.marketer_name || undefined,
-        minOrderUSD: row.min_order_usd ? Number(row.min_order_usd) : undefined,
-        maxDiscountUSD: row.max_discount_usd ? Number(row.max_discount_usd) : undefined,
-        expiresAt: row.expires_at || undefined,
-        usageLimit: row.usage_limit || row.max_uses ? Number(row.usage_limit || row.max_uses) : undefined,
-        usedCount: Number(row.current_uses || row.used_count || 0),
-        totalRevenueUSD: Number(row.total_revenue || 0),
+        discountValue: Number(row.discount_value || 0),
+        usedCount: Number(row.current_uses || 0),
+        totalRevenueUSD: 0,
         isActive: row.is_active !== undefined ? Boolean(row.is_active) : true,
       };
     }
@@ -332,27 +400,30 @@ export async function fetchCouponsFromSupabase(): Promise<Record<string, Coupon>
 
 export async function upsertCouponToSupabase(coupon: Coupon): Promise<{ success: boolean; error: string | null }> {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) return { success: false, error: 'Supabase client not initialized' };
-
     const cleanCode = coupon.code.trim().toUpperCase();
     const row = {
       code: cleanCode,
       discount_type: coupon.discountType,
-      discount_value: coupon.discountValue,
-      affiliate_name: coupon.affiliateName || null,
-      min_order_usd: coupon.minOrderUSD || null,
-      max_discount_usd: coupon.maxDiscountUSD || null,
-      expires_at: coupon.expiresAt || null,
-      usage_limit: coupon.usageLimit || null,
-      current_uses: coupon.usedCount || 0,
-      used_count: coupon.usedCount || 0,
-      total_revenue: coupon.totalRevenueUSD || 0,
-      is_active: coupon.isActive,
-      updated_at: new Date().toISOString(),
+      discount_value: Number(coupon.discountValue || 0),
+      current_uses: Number(coupon.usedCount || 0),
+      is_active: Boolean(coupon.isActive),
     };
 
-    const { error } = await supabase.from('coupons').upsert(row, { onConflict: 'code' });
+    const { data: existing } = await supabase
+      .from('coupons')
+      .select('id')
+      .ilike('code', cleanCode)
+      .maybeSingle();
+
+    let error;
+    if (existing && existing.id) {
+      const res = await supabase.from('coupons').update(row).eq('id', existing.id);
+      error = res.error;
+    } else {
+      const res = await supabase.from('coupons').insert([{ id: generateUUID(), ...row }]);
+      error = res.error;
+    }
+
     if (error) {
       console.error('[Supabase Upsert Coupon Error]', error.message);
       return { success: false, error: error.message };
@@ -366,9 +437,6 @@ export async function upsertCouponToSupabase(coupon: Coupon): Promise<{ success:
 
 export async function deleteCouponFromSupabase(code: string): Promise<{ success: boolean; error: string | null }> {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) return { success: false, error: 'Supabase client not initialized' };
-
     const cleanCode = code.trim().toUpperCase();
     const { error } = await supabase.from('coupons').delete().ilike('code', cleanCode);
     if (error) {
@@ -382,6 +450,52 @@ export async function deleteCouponFromSupabase(code: string): Promise<{ success:
   }
 }
 
+export async function fetchCouponFromSupabase(code: string): Promise<Coupon | null> {
+  try {
+    const cleanCode = code.trim().toUpperCase();
+    const { data, error } = await supabase
+      .from('coupons')
+      .select('*')
+      .ilike('code', cleanCode)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    return {
+      code: data.code || cleanCode,
+      discountType: (data.discount_type === 'percentage' || data.discount_type === 'percent') ? 'percentage' : 'fixed_usd',
+      discountValue: Number(data.discount_value || 0),
+      usedCount: Number(data.current_uses || 0),
+      totalRevenueUSD: 0,
+      isActive: data.is_active !== undefined ? Boolean(data.is_active) : true,
+    };
+  } catch (err) {
+    console.warn('[Supabase Coupon Lookup Exception]', err);
+    return null;
+  }
+}
+
+export async function incrementCouponUsageInSupabase(code: string, _orderTotalUSD?: number): Promise<void> {
+  try {
+    const cleanCode = code.trim().toUpperCase();
+    const { data } = await supabase
+      .from('coupons')
+      .select('id, current_uses')
+      .ilike('code', cleanCode)
+      .maybeSingle();
+
+    if (data && data.id) {
+      const currentUses = Number(data.current_uses || 0) + 1;
+      await supabase
+        .from('coupons')
+        .update({ current_uses: currentUses })
+        .eq('id', data.id);
+    }
+  } catch (err) {
+    console.warn('[Supabase Coupon Usage Increment Exception]', err);
+  }
+}
+
 /* =========================================================================
    RECEIPTS & ORDERS
 ========================================================================= */
@@ -391,12 +505,6 @@ export async function uploadReceiptImage(
   fileName: string
 ): Promise<{ url: string | null; error: string | null }> {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      console.warn('[Supabase Storage] Client not initialized, using local fallback.');
-      return { url: null, error: 'Supabase client not initialized' };
-    }
-
     let fileBody: File | Blob;
     let extension = 'png';
 
@@ -454,36 +562,25 @@ export async function uploadReceiptImage(
   }
 }
 
-export async function syncOrderToSupabase(order: OrderPayload): Promise<{ success: boolean; error: string | null }> {
+export async function syncOrderToSupabase(order: OrderPayload): Promise<{ success: boolean; error: string | null; id?: string }> {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) return { success: false, error: 'Supabase client unavailable' };
-
-    if (!order || !order.id || !order.customer?.fullName) {
+    if (!order || !order.customer?.fullName) {
       return { success: false, error: 'Missing required order fields' };
     }
 
+    const orderId = isValidUUID(order.id) ? order.id : generateUUID();
     const orderRow = {
-      id: order.id,
-      order_number: order.orderNumber,
-      customer_name: order.customer.fullName,
-      customer_whatsapp: order.customer.whatsappNumber || null,
+      id: orderId,
+      customer_name: order.customer.fullName.trim(),
       product_title: order.item?.product?.titleAr || order.item?.product?.title || 'Unknown Product',
-      product_tier: order.item?.product?.metadata?.durationAr || order.item?.product?.tier || 'Standard',
-      original_total_usd: order.originalTotalUSD || 0,
-      discount_usd: order.discountUSD || 0,
-      final_total_usd: order.finalTotalUSD || 0,
-      final_total_converted: order.finalTotalConverted || 0,
       currency: order.currency || 'USD',
-      exchange_rate_used: order.exchangeRateUsed || 1,
-      payment_method: order.paymentMethod || 'kuraimi',
+      final_amount: Number(order.finalTotalUSD || 0),
       coupon_code: order.couponCode || null,
+      payment_method: order.paymentMethod || 'kuraimi',
       receipt_url: order.proof?.receiptImageUrl || null,
-      receipt_filename: order.proof?.fileName || null,
-      channel: order.channel || 'whatsapp',
+      target_platform: order.channel || 'whatsapp',
       status: order.status || 'contacted',
       created_at: order.createdAt || new Date().toISOString(),
-      updated_at: order.updatedAt || new Date().toISOString(),
     };
 
     const { error: insertError } = await supabase
@@ -495,76 +592,115 @@ export async function syncOrderToSupabase(order: OrderPayload): Promise<{ succes
       return { success: false, error: insertError.message };
     }
 
-    return { success: true, error: null };
+    return { success: true, error: null, id: orderId };
   } catch (err) {
     console.warn('[Supabase DB Exception]', err);
     return { success: false, error: String(err) };
   }
 }
 
-export async function fetchCouponFromSupabase(code: string): Promise<Coupon | null> {
+export async function fetchOrdersFromSupabase(): Promise<OrderPayload[] | null> {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) return null;
-
-    const cleanCode = code.trim().toUpperCase();
-
     const { data, error } = await supabase
-      .from('coupons')
+      .from('orders')
       .select('*')
-      .ilike('code', cleanCode)
-      .maybeSingle();
+      .order('created_at', { ascending: false });
 
-    if (error || !data) return null;
+    if (error || !data) {
+      if (error) console.warn('[Supabase Orders Fetch Error]', error.message);
+      return null;
+    }
 
-    return {
-      code: data.code || cleanCode,
-      discountType: (data.discount_type === 'percentage' || data.discount_type === 'percent') ? 'percentage' : 'fixed_usd',
-      discountValue: Number(data.discount_value || data.discount_amount || 0),
-      affiliateName: data.affiliate_name || data.marketer_name || undefined,
-      minOrderUSD: data.min_order_usd ? Number(data.min_order_usd) : undefined,
-      maxDiscountUSD: data.max_discount_usd ? Number(data.max_discount_usd) : undefined,
-      expiresAt: data.expires_at || undefined,
-      usageLimit: data.usage_limit || data.max_uses ? Number(data.usage_limit || data.max_uses) : undefined,
-      usedCount: Number(data.current_uses || data.used_count || 0),
-      totalRevenueUSD: Number(data.total_revenue || 0),
-      isActive: data.is_active !== undefined ? Boolean(data.is_active) : true,
-    };
+    return data.map((row: any): OrderPayload => ({
+      id: row.id,
+      orderNumber: `ORD-${(row.id || '').substring(0, 8).toUpperCase()}`,
+      item: {
+        product: {
+          id: row.id,
+          slug: row.id,
+          title: row.product_title || 'اشتراك ذكاء اصطناعي',
+          titleAr: row.product_title || 'اشتراك ذكاء اصطناعي',
+          shortDescription: '',
+          shortDescriptionAr: '',
+          fullDescription: '',
+          fullDescriptionAr: '',
+          category: 'ai-subscription',
+          tier: 'monthly',
+          priceUSD: Number(row.final_amount || 0),
+          isAvailable: true,
+          instantDelivery: true,
+          thumbnailUrl: getThumbnailForCategory('ai-subscription', row.product_title),
+          features: [],
+        },
+        quantity: 1,
+        unitPriceUSD: Number(row.final_amount || 0),
+      },
+      customer: {
+        fullName: row.customer_name || 'عميل كودورا',
+      },
+      paymentMethod: (row.payment_method as any) || 'kuraimi',
+      currency: (row.currency as any) || 'USD',
+      exchangeRateUsed: 1,
+      originalTotalUSD: Number(row.final_amount || 0),
+      discountUSD: 0,
+      finalTotalUSD: Number(row.final_amount || 0),
+      finalTotalConverted: Number(row.final_amount || 0),
+      couponCode: row.coupon_code || undefined,
+      proof: row.receipt_url
+        ? {
+            receiptImageUrl: row.receipt_url,
+            submittedAt: row.created_at,
+          }
+        : undefined,
+      channel: (row.target_platform as any) || 'whatsapp',
+      status: (row.status as any) || 'contacted',
+      createdAt: row.created_at || new Date().toISOString(),
+      updatedAt: row.created_at || new Date().toISOString(),
+    }));
   } catch (err) {
-    console.warn('[Supabase Coupon Lookup Exception]', err);
+    console.warn('[Supabase Orders Fetch Exception]', err);
     return null;
   }
 }
 
-export async function incrementCouponUsageInSupabase(code: string, orderTotalUSD: number): Promise<void> {
+export async function updateOrderStatusInSupabase(
+  orderId: string,
+  status: OrderStatus
+): Promise<{ success: boolean; error: string | null }> {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
+    const { error } = await supabase
+      .from('orders')
+      .update({ status })
+      .eq('id', orderId);
 
-    const cleanCode = code.trim().toUpperCase();
-
-    const { data } = await supabase
-      .from('coupons')
-      .select('id, current_uses, used_count, total_revenue')
-      .ilike('code', cleanCode)
-      .maybeSingle();
-
-    if (data && data.id) {
-      const currentUses = (data.current_uses || data.used_count || 0) + 1;
-      const currentRev = (data.total_revenue || 0) + orderTotalUSD;
-
-      await supabase
-        .from('coupons')
-        .update({
-          current_uses: currentUses,
-          used_count: currentUses,
-          total_revenue: currentRev,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', data.id);
+    if (error) {
+      console.error('[Supabase Order Status Update Error]', error.message);
+      return { success: false, error: error.message };
     }
+    return { success: true, error: null };
   } catch (err) {
-    console.warn('[Supabase Coupon Usage Increment Exception]', err);
+    console.error('[Supabase Order Status Update Exception]', err);
+    return { success: false, error: String(err) };
+  }
+}
+
+export async function deleteOrderFromSupabase(
+  orderId: string
+): Promise<{ success: boolean; error: string | null }> {
+  try {
+    const { error } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', orderId);
+
+    if (error) {
+      console.error('[Supabase Order Delete Error]', error.message);
+      return { success: false, error: error.message };
+    }
+    return { success: true, error: null };
+  } catch (err) {
+    console.error('[Supabase Order Delete Exception]', err);
+    return { success: false, error: String(err) };
   }
 }
 
@@ -577,9 +713,6 @@ export function subscribeToSupabaseChanges(
   onPayload: (payload: any) => void
 ): RealtimeChannel | null {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) return null;
-
     const channel = supabase
       .channel(`public-db-${tableName}-${Date.now()}`)
       .on(

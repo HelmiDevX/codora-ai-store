@@ -42,12 +42,11 @@ export default function AdminDashboardPage() {
   const { fetchInitialData: fetchProducts } = useProductsStore();
   const { fetchInitialData: fetchCurrency } = useCurrencyStore();
   const { fetchInitialData: fetchCoupons } = useCouponsStore();
+  const { orders, addOrder, fetchInitialData: fetchOrders } = useOrdersStore();
 
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
-
-  const { orders, addOrder } = useOrdersStore();
 
   // Check sessionStorage for previous unlock in this session & hydrate Supabase
   useEffect(() => {
@@ -63,7 +62,8 @@ export default function AdminDashboardPage() {
     fetchCurrency();
     fetchSettings();
     fetchCoupons();
-  }, [fetchProducts, fetchCurrency, fetchSettings, fetchCoupons]);
+    fetchOrders();
+  }, [fetchProducts, fetchCurrency, fetchSettings, fetchCoupons, fetchOrders]);
 
   // Listen to cross-tab BroadcastChannel for incoming orders from Storefront
   useEffect(() => {

@@ -69,9 +69,15 @@ export const useProductsStore = create<ProductsStoreState>()((set, get) => ({
       return { success: false, error: res.error || 'فشل في حفظ المنتج في السحابة' };
     }
 
+    const savedProduct: Product = {
+      ...product,
+      id: res.id || product.id,
+      slug: res.id || product.slug,
+    };
+
     // 2. Update UI only after DB confirmation
     set((state) => ({
-      products: [product, ...state.products.filter(p => p.id !== product.id)],
+      products: [savedProduct, ...state.products.filter(p => p.id !== savedProduct.id)],
     }));
 
     return { success: true };
