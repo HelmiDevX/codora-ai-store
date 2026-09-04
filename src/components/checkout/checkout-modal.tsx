@@ -268,6 +268,11 @@ export const CheckoutModal: React.FC = () => {
       setErrorMessage('يرجى كتابة الاسم الكريم قبل إتمام الطلب');
       return null;
     }
+
+    if (!paymentProof || (!paymentProof.receiptImageBase64 && !paymentProof.receiptImageUrl)) {
+      setErrorMessage('يرجى إرفاق صورة سند التحويل أو إشعار الدفع لإتمام الطلب 📎');
+      return null;
+    }
     setErrorMessage(null);
 
     const orderNumber = generateOrderNumber();
@@ -700,16 +705,28 @@ export const CheckoutModal: React.FC = () => {
 
         {/* STEP 3: Payment Proof Uploader */}
         <div className="p-3 sm:p-4 rounded-2xl bg-slate-900/50 border border-slate-800 w-full">
-          <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5 pb-2 mb-2.5 border-b border-slate-800/80">
-            <span className="h-5 w-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px] flex-shrink-0">
-              3
-            </span>
-            إرفاق سند الدفع (Proof of Payment)
+          <div className="text-xs font-bold text-slate-200 flex items-center justify-between pb-2 mb-2.5 border-b border-slate-800/80">
+            <div className="flex items-center gap-1.5">
+              <span className="h-5 w-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px] flex-shrink-0">
+                3
+              </span>
+              <span>إرفاق سند الدفع (Proof of Payment)</span>
+              <span className="text-red-400 font-bold">*</span>
+            </div>
+            <Badge variant="warning" size="sm" className="text-[10px] bg-amber-500/10 text-amber-300 border-amber-500/20">
+              إجباري
+            </Badge>
           </div>
 
           <ProofUploader
             proof={paymentProof}
-            onProofChange={(proof) => setPaymentProof(proof)}
+            hasError={Boolean(errorMessage && (!paymentProof || (!paymentProof.receiptImageBase64 && !paymentProof.receiptImageUrl)))}
+            onProofChange={(proof) => {
+              setPaymentProof(proof);
+              if (proof && errorMessage) {
+                setErrorMessage(null);
+              }
+            }}
           />
         </div>
 

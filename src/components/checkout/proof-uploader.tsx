@@ -8,11 +8,13 @@ import { PaymentProof } from '@/types/order';
 interface ProofUploaderProps {
   proof: PaymentProof | null;
   onProofChange: (proof: PaymentProof | null) => void;
+  hasError?: boolean;
 }
 
 export const ProofUploader: React.FC<ProofUploaderProps> = ({
   proof,
   onProofChange,
+  hasError = false,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,7 +84,8 @@ export const ProofUploader: React.FC<ProofUploaderProps> = ({
       <div className="flex items-center justify-between">
         <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
           <ImageIcon className="h-4 w-4 text-indigo-400" />
-          إرفاق إشعار التحويل / لقطة الشاشة (اختياري)
+          <span>إرفاق إشعار التحويل / صورة السند</span>
+          <span className="text-red-400 font-bold">*</span>
         </label>
         <span className="text-[11px] text-slate-500">PNG, JPG, WEBP</span>
       </div>
@@ -102,19 +105,29 @@ export const ProofUploader: React.FC<ProofUploaderProps> = ({
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
           className={`flex flex-col items-center justify-center p-5 sm:p-6 border-2 border-dashed rounded-2xl cursor-pointer transition-all text-center ${
-            isDragging
+            hasError
+              ? 'border-red-500/70 bg-red-950/20 ring-1 ring-red-500/40 animate-pulse'
+              : isDragging
               ? 'border-indigo-400 bg-indigo-950/40 scale-[0.99]'
               : 'border-slate-800 hover:border-indigo-500/50 bg-slate-950/50 hover:bg-slate-950/80'
           }`}
         >
-          <div className="h-10 w-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-2">
+          <div
+            className={`h-10 w-10 rounded-xl border flex items-center justify-center mb-2 ${
+              hasError
+                ? 'bg-red-500/20 border-red-500/40 text-red-400'
+                : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
+            }`}
+          >
             <UploadCloud className="h-5 w-5" />
           </div>
-          <p className="text-xs sm:text-sm font-medium text-slate-200">
+          <p className={`text-xs sm:text-sm font-medium ${hasError ? 'text-red-300 font-bold' : 'text-slate-200'}`}>
             اضغط لاختيار صورة السند أو اسحب الملف وأفلته هنا
           </p>
-          <p className="text-[11px] text-slate-500 mt-1">
-            يساعد في تسريع التحقق والتفعيل المباشر للطلب
+          <p className={`text-[11px] mt-1 ${hasError ? 'text-red-400 font-semibold' : 'text-slate-500'}`}>
+            {hasError
+              ? '⚠️ مطلوب: يجب إرفاق سند التحويل لإتمام الطلب'
+              : 'إرفاق سند الدفع إجباري لتأكيد التحويل والبدء بتفعيل الحساب مباشرة'}
           </p>
         </div>
       ) : (

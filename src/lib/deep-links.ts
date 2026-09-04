@@ -37,7 +37,7 @@ export function buildOrderSummaryMessage(order: OrderPayload): string {
 💰 *المبلغ المستحق:* ${formattedFinalPrice} (${usdPrice})
 ${order.couponCode ? `🎟️ *كوبون الخصم:* ${order.couponCode} (تم تطبيق الخصم)` : ''}
 💳 *طريقة الدفع:* ${paymentName}
-${order.proof?.fileName ? `📎 *إشعار التحويل:* تم إرفاق سند الدفع بنجاح` : ''}
+${order.proof ? `📎 *إشعار التحويل:* تم إرفاق سند الدفع (${order.proof.fileName || 'مرفق'})${order.proof.receiptImageUrl?.startsWith('http') ? `\n🔗 *رابط السند:* ${order.proof.receiptImageUrl}` : ''}` : ''}
 ══════════════════════
 🚀 _يرجى مراجعة الطلب وتأكيد التفعيل الفوري للحساب._`;
 }
