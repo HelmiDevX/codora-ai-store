@@ -648,9 +648,9 @@ export async function fetchOrdersFromSupabase(): Promise<OrderPayload[] | null> 
       couponCode: row.coupon_code || undefined,
       proof: row.receipt_url
         ? {
-            receiptImageUrl: row.receipt_url,
-            submittedAt: row.created_at,
-          }
+          receiptImageUrl: row.receipt_url,
+          submittedAt: row.created_at,
+        }
         : undefined,
       channel: (row.target_platform as any) || 'whatsapp',
       status: (row.status as any) || 'contacted',
