@@ -10,7 +10,6 @@ import {
   ExternalLink, 
   ShieldCheck, 
   Headphones, 
-  Sparkles,
   Tag
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,32 +24,26 @@ export const Header: React.FC = () => {
 
   return (
     <>
-      {/* 1. Top Global Announcement Bar */}
-      <div className="w-full bg-gradient-to-r from-indigo-950 via-purple-950 to-slate-950 border-b border-indigo-500/20 py-1.5 px-3 text-center text-[11px] sm:text-xs text-slate-300 font-medium overflow-hidden relative">
-        <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 flex-wrap">
-          <span className="inline-flex items-center gap-1 text-emerald-400 font-bold">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-            ⚡ تفعيل فوري متاح الآن
-          </span>
-          <span className="text-slate-600 hidden sm:inline">•</span>
+      {/* 1. Clean Top Header Bar */}
+      <div className="w-full bg-slate-950 border-b border-slate-800/80 py-1.5 px-3 text-center text-[11px] sm:text-xs text-slate-400 font-medium">
+        <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 sm:gap-4 flex-wrap">
           <span className="text-slate-300">
-            ضمان استبدال ذهبي 100% لكافة الحسابات
+            المنصة المعتمدة للاشتراكات الرقمية وأدوات الذكاء الاصطناعي
           </span>
-          <span className="text-slate-600 hidden md:inline">•</span>
-          <span className="hidden md:inline-flex items-center gap-1 text-indigo-300 bg-indigo-500/15 px-2 py-0.5 rounded-full border border-indigo-500/30 font-mono">
-            <Tag className="h-3 w-3" />
-            كود الخصم: AI2026
+          <span className="text-slate-700 hidden sm:inline">•</span>
+          <span className="text-indigo-300 hidden sm:inline">
+            دفع محلي عبر الكريمي، جيب، ون كاش، وبايننس
           </span>
         </div>
       </div>
 
-      {/* 2. Main Sticky Header */}
-      <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-2xl transition-all shadow-lg shadow-black/20">
+      {/* 2. Main Navigation Header */}
+      <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-2xl transition-all shadow-md">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2">
           {/* Logo & Store Name */}
           <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group flex-shrink-0 select-none">
             <div className="relative">
-              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-gradient-to-tr from-indigo-600/30 via-purple-600/20 to-indigo-600/30 border border-indigo-500/40 flex items-center justify-center group-hover:border-indigo-400/80 transition-all duration-300 shadow-lg shadow-indigo-500/10 group-hover:scale-105">
+              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center group-hover:border-indigo-400/80 transition-all duration-300 shadow-lg shadow-indigo-500/10">
                 <Zap className="h-5 w-5 sm:h-6 sm:w-6 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
               </div>
             </div>
@@ -61,13 +54,9 @@ export const Header: React.FC = () => {
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 font-extrabold text-xs sm:text-base font-mono">
                   CODORA AI
                 </span>
-                <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  مباشر
-                </span>
               </div>
               <div className="text-[10px] sm:text-[11px] text-slate-400 font-medium hidden xs:block">
-                المنصة المعتمدة للاشتراكات الرقمية والذكاء الاصطناعي
+                متجر الاشتراكات وحلول الذكاء الاصطناعي
               </div>
             </div>
           </Link>
@@ -77,15 +66,15 @@ export const Header: React.FC = () => {
             {/* Multi-Currency Dropdown */}
             <CurrencySelector compact />
 
-            {/* Direct WhatsApp Support Button */}
+            {/* WhatsApp Contact */}
             <a
-              href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('مرحباً بكودورا، أريد الاستفسار عن الاشتراكات الرقمية والتفعيل الفوري.')}`}
+              href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('مرحباً بكودورا، أود الاستفسار عن الاشتراكات الرقمية المتوفرة.')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition-all shadow-sm active:scale-95"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-200 text-xs font-bold transition-all shadow-sm active:scale-95"
             >
               <MessageCircle className="h-3.5 w-3.5 text-emerald-400" />
-              <span>واتساب الدعم</span>
+              <span>خدمة العملاء</span>
             </a>
 
             {/* Support Dialog Trigger */}
@@ -109,32 +98,32 @@ export const Header: React.FC = () => {
         onClose={() => setSupportModalOpen(false)}
         maxWidth="md"
         title="خدمة العملاء والدعم الفني 🎧"
-        description="فريق الدعم متواجد على مدار الساعة لمساعدتك في التفعيل والاستفسارات"
+        description="فريق الدعم متواجد لمساعدتك في أي استفسار حول الحسابات وطرق الدفع"
       >
         <div className="space-y-4 py-2">
           <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
-              <ShieldCheck className="h-4 w-4" />
-              تفعيل رسمي مباشر وضمان استبدال ذهبي
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
+              <ShieldCheck className="h-4 w-4 text-indigo-400" />
+              ضمان رسمي واستبدال طوال مدة الاشتراك
             </div>
             <p className="text-xs text-slate-300 leading-relaxed">
-              إذا كان لديك أي استفسار قبل أو بعد الشراء حول الحسابات، التحويل المالي عبر الكريمي أو جيب أو ون كاش أو بايننس USDT، يسعدنا خدمتك مباشرة:
+              إذا كان لديك أي استفسار حول الحسابات، التحويل المالي عبر بنك الكريمي، محفظة جيب، ون كاش، أو USDT:
             </p>
           </div>
 
           <div className="space-y-2.5">
             <a
-              href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('مرحباً كودورا، أريد الاستفسار عن الاشتراكات وطرق الدفع والتفعيل.')}`}
+              href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('مرحباً كودورا، أود الاستفسار عن الاشتراكات وطرق الدفع.')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-between p-3.5 rounded-2xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/30 text-emerald-200 transition-all text-xs font-bold group active:scale-[0.98]"
+              className="flex items-center justify-between p-3.5 rounded-2xl bg-emerald-950/30 hover:bg-emerald-900/40 border border-emerald-500/25 text-emerald-200 transition-all text-xs font-bold group active:scale-[0.98]"
             >
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400">
                   <MessageCircle className="h-4 w-4" />
                 </div>
                 <div>
-                  <div>واتساب الدعم السريع</div>
+                  <div>واتساب خدمة العملاء</div>
                   <div className="text-[10px] text-emerald-400/80 font-mono font-normal dir-ltr text-right">{whatsappNumber}</div>
                 </div>
               </div>
@@ -145,7 +134,7 @@ export const Header: React.FC = () => {
               href={`https://t.me/${telegramUsername || 'ai_store_support'}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-between p-3.5 rounded-2xl bg-sky-950/40 hover:bg-sky-900/50 border border-sky-500/30 text-sky-200 transition-all text-xs font-bold group active:scale-[0.98]"
+              className="flex items-center justify-between p-3.5 rounded-2xl bg-sky-950/30 hover:bg-sky-900/40 border border-sky-500/25 text-sky-200 transition-all text-xs font-bold group active:scale-[0.98]"
             >
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-sky-500/20 text-sky-400">
@@ -170,4 +159,5 @@ export const Header: React.FC = () => {
     </>
   );
 };
+
 

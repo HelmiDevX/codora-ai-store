@@ -460,8 +460,8 @@ export const CheckoutModal: React.FC = () => {
       isOpen={isOpen}
       onClose={closeCheckout}
       maxWidth="md"
-      title="إتمام الطلب السريع ⚡"
-      description="خطوات بسيطة وسريعة لتأكيد طلبك وتفعيل حسابك مباشرة"
+      title="إتمام الطلب"
+      description="أدخل بياناتك لتأكيد الاشتراك واختيار وسيلة الدفع المناسبة"
     >
       <div className="space-y-4 sm:space-y-5 w-full">
         {/* Error Alert if Validation Fails */}
@@ -752,7 +752,7 @@ export const CheckoutModal: React.FC = () => {
             type="button"
             disabled={isProcessing}
             onClick={handleWhatsAppCheckout}
-            className="w-full flex items-center justify-between p-3 sm:p-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-emerald-600/25 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed group"
+            className="w-full flex items-center justify-between p-3 sm:p-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm transition-all shadow-md active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed group"
           >
             <div className="flex items-center gap-2 sm:gap-2.5">
               <div className="h-7 w-7 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
@@ -762,11 +762,8 @@ export const CheckoutModal: React.FC = () => {
                   <MessageCircle className="h-4 w-4 text-white" />
                 )}
               </div>
-              <span className="text-xs sm:text-sm">إتمام الطلب عبر واتساب (WhatsApp)</span>
+              <span className="text-xs sm:text-sm">إرسال الطلب عبر واتساب (WhatsApp)</span>
             </div>
-            <span className="text-[10px] sm:text-[11px] bg-white/10 px-2 py-0.5 rounded-md font-normal flex-shrink-0">
-              تفعيل فوري ⚡
-            </span>
           </button>
 
           {/* 🔵 Telegram */}
@@ -774,7 +771,7 @@ export const CheckoutModal: React.FC = () => {
             type="button"
             disabled={isProcessing}
             onClick={handleTelegramCheckout}
-            className="w-full flex items-center justify-between p-3 sm:p-3.5 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-sky-600/25 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed group"
+            className="w-full flex items-center justify-between p-3 sm:p-3.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs sm:text-sm transition-all shadow-md active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed group"
           >
             <div className="flex items-center gap-2 sm:gap-2.5">
               <div className="h-7 w-7 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
@@ -784,11 +781,8 @@ export const CheckoutModal: React.FC = () => {
                   <Send className="h-4 w-4 text-white" />
                 )}
               </div>
-              <span className="text-xs sm:text-sm">إتمام الطلب عبر تليجرام (Telegram)</span>
+              <span className="text-xs sm:text-sm">إرسال الطلب عبر تليجرام (Telegram)</span>
             </div>
-            <span className="text-[10px] sm:text-[11px] bg-white/10 px-2 py-0.5 rounded-md font-normal flex-shrink-0">
-              دعم آلي 🤖
-            </span>
           </button>
 
           {/* 🟣 Instagram */}
@@ -796,7 +790,7 @@ export const CheckoutModal: React.FC = () => {
             type="button"
             disabled={isProcessing}
             onClick={handleInstagramCheckout}
-            className="w-full flex items-center justify-between p-3 sm:p-3.5 rounded-xl bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-pink-600/25 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed group"
+            className="w-full flex items-center justify-between p-3 sm:p-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs sm:text-sm transition-all shadow-md active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed group"
           >
             <div className="flex items-center gap-2 sm:gap-2.5">
               <div className="h-7 w-7 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
@@ -806,11 +800,8 @@ export const CheckoutModal: React.FC = () => {
                   <Instagram className="h-4 w-4 text-white" />
                 )}
               </div>
-              <span className="text-xs sm:text-sm">إتمام الطلب عبر إنستغرام (Direct)</span>
+              <span className="text-xs sm:text-sm">إرسال الطلب عبر إنستغرام (Direct)</span>
             </div>
-            <span className="text-[10px] sm:text-[11px] bg-white/10 px-2 py-0.5 rounded-md font-normal flex-shrink-0">
-              نسخ الفاتورة 📋
-            </span>
           </button>
         </div>
       </div>

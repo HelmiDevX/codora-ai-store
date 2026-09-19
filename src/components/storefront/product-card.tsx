@@ -125,11 +125,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* Order Now Button */}
         <Button
           onClick={() => openCheckout(product)}
-          className="w-full justify-between items-center text-xs sm:text-sm font-bold py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-600/20 border border-indigo-400/30 group/btn transition-all active:scale-[0.98]"
+          className="w-full justify-between items-center text-xs sm:text-sm font-bold py-3.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl shadow-lg shadow-indigo-600/20 border border-indigo-400/30 group/btn transition-all active:scale-[0.98]"
         >
           <div className="flex items-center gap-2">
             <ShoppingBag className="h-4 w-4" />
-            <span>طلب فوري (Order Now)</span>
+            <span>طلب الاشتراك (Order Now)</span>
           </div>
           <ArrowLeft className="h-4 w-4 transition-transform duration-300 group-hover/btn:-translate-x-1" />
         </Button>
@@ -137,4 +137,5 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     </div>
   );
 };
+
 
