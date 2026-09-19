@@ -1,6 +1,5 @@
 -- =========================================================================
--- CODORA AI STORE - SUPABASE DATABASE SCHEMA & RLS POLICIES
--- انسخ هذا الكود والصقه في Supabase SQL Editor واضغط Run
+-- CODORA AI STORE - SUPABASE DATABASE SCHEMA & REALTIME POLICIES
 -- =========================================================================
 
 -- 1. جدول إعدادات المتجر وحسابات الدفع (Store Settings)
@@ -85,7 +84,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
 );
 
 -- =========================================================================
--- تمكين الأذونات العامة (RLS Policies) لتمكين القراءة والتحديث المباشر
+-- تمكين الأذونات العامة (RLS Policies)
 -- =========================================================================
 ALTER TABLE public.store_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.exchange_rates ENABLE ROW LEVEL SECURITY;
@@ -93,12 +92,47 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.coupons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 
--- سماح لجميع الزوار والمشرفين بالقراءة والتعديل
+DROP POLICY IF EXISTS "Public Read/Write Store Settings" ON public.store_settings;
 CREATE POLICY "Public Read/Write Store Settings" ON public.store_settings FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Read/Write Exchange Rates" ON public.exchange_rates;
 CREATE POLICY "Public Read/Write Exchange Rates" ON public.exchange_rates FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Read/Write Products" ON public.products;
 CREATE POLICY "Public Read/Write Products" ON public.products FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Read/Write Coupons" ON public.coupons;
 CREATE POLICY "Public Read/Write Coupons" ON public.coupons FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Read/Write Orders" ON public.orders;
 CREATE POLICY "Public Read/Write Orders" ON public.orders FOR ALL USING (true) WITH CHECK (true);
+
+-- =========================================================================
+-- تفعيل البث اللحظي السحابي (Supabase Realtime)
+-- =========================================================================
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.store_settings;
+  EXCEPTION WHEN others THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.exchange_rates;
+  EXCEPTION WHEN others THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.products;
+  EXCEPTION WHEN others THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.coupons;
+  EXCEPTION WHEN others THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.orders;
+  EXCEPTION WHEN others THEN NULL;
+  END;
+END $$;
 
 -- إدراج البيانات الأولية إذا لم تكن موجودة
 INSERT INTO public.store_settings (whatsapp_number, kuraimi_acc, kuraimi_name, jeeb_phone, qutaibi_acc, usdt_address)
