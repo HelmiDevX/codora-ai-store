@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { CurrencyCode, ExchangeRatesMap } from '@/types/currency';
 import { DEFAULT_EXCHANGE_RATES, EXCHANGE_RATES_LAST_UPDATED } from '@/data/mock-rates';
 import { convertFromUSD, formatCurrency } from '@/lib/currency';
@@ -7,6 +8,7 @@ import {
   upsertExchangeRatesToSupabase, 
   subscribeToSupabaseChanges 
 } from '@/lib/supabase';
+import { broadcastSyncEvent } from '@/lib/broadcast-bus';
 
 interface CurrencyStoreState {
   activeCurrency: CurrencyCode;
@@ -16,84 +18,96 @@ interface CurrencyStoreState {
   fetchInitialData: () => Promise<void>;
   setCurrency: (currency: CurrencyCode) => void;
   updateRates: (newRates: Partial<ExchangeRatesMap>) => Promise<{ success: boolean; error?: string }>;
+  setFullRates: (rates: ExchangeRatesMap) => void;
   convertPrice: (amountUSD: number) => number;
   formatPrice: (amountUSD: number, locale?: 'ar' | 'en') => string;
 }
 
 let isRatesSubscribed = false;
 
-export const useCurrencyStore = create<CurrencyStoreState>()((set, get) => ({
-  activeCurrency: 'USD',
-  rates: DEFAULT_EXCHANGE_RATES,
-  lastUpdated: EXCHANGE_RATES_LAST_UPDATED,
-  isLoading: true,
+export const useCurrencyStore = create<CurrencyStoreState>()(
+  persist(
+    (set, get) => ({
+      activeCurrency: 'USD',
+      rates: DEFAULT_EXCHANGE_RATES,
+      lastUpdated: EXCHANGE_RATES_LAST_UPDATED,
+      isLoading: false,
 
-  fetchInitialData: async () => {
-    set({ isLoading: true });
-    try {
-      const liveRates = await fetchExchangeRatesFromSupabase();
-      if (liveRates) {
-        set({ 
-          rates: { ...DEFAULT_EXCHANGE_RATES, ...liveRates }, 
-          lastUpdated: new Date().toISOString(),
-          isLoading: false 
-        });
-      } else {
-        set({ rates: DEFAULT_EXCHANGE_RATES, isLoading: false });
-      }
-
-      if (!isRatesSubscribed && typeof window !== 'undefined') {
-        isRatesSubscribed = true;
-        subscribeToSupabaseChanges('exchange_rates', async () => {
-          const refreshed = await fetchExchangeRatesFromSupabase();
-          if (refreshed) {
+      fetchInitialData: async () => {
+        try {
+          const liveRates = await fetchExchangeRatesFromSupabase();
+          if (liveRates) {
             set({ 
-              rates: { ...DEFAULT_EXCHANGE_RATES, ...refreshed }, 
-              lastUpdated: new Date().toISOString() 
+              rates: { ...DEFAULT_EXCHANGE_RATES, ...liveRates }, 
+              lastUpdated: new Date().toISOString(),
+              isLoading: false 
             });
           }
+
+          if (!isRatesSubscribed && typeof window !== 'undefined') {
+            isRatesSubscribed = true;
+            subscribeToSupabaseChanges('exchange_rates', async () => {
+              const refreshed = await fetchExchangeRatesFromSupabase();
+              if (refreshed) {
+                const merged = { ...DEFAULT_EXCHANGE_RATES, ...refreshed };
+                set({ 
+                  rates: merged, 
+                  lastUpdated: new Date().toISOString() 
+                });
+                broadcastSyncEvent('RATES_UPDATED', merged);
+              }
+            });
+          }
+        } catch (err) {
+          console.warn('[Currency Store Hydration Warning]', err);
+        }
+      },
+
+      setCurrency: (currency: CurrencyCode) => {
+        set({ activeCurrency: currency });
+      },
+
+      updateRates: async (newRates: Partial<ExchangeRatesMap>) => {
+        const currentRates = get().rates;
+        const mergedRates: ExchangeRatesMap = {
+          ...currentRates,
+          ...newRates,
+        };
+
+        // 1. Immediate local state update
+        set({
+          rates: mergedRates,
+          lastUpdated: new Date().toISOString(),
         });
-      }
-    } catch (err) {
-      console.warn('[Currency Store Hydration Error]', err);
-      set({ rates: DEFAULT_EXCHANGE_RATES, isLoading: false });
+
+        // 2. Broadcast to all open tabs
+        broadcastSyncEvent('RATES_UPDATED', mergedRates);
+
+        // 3. Persist to Supabase in background
+        upsertExchangeRatesToSupabase(mergedRates).catch((err) => {
+          console.warn('[Supabase Exchange Rates Save Warning]', err);
+        });
+
+        return { success: true };
+      },
+
+      setFullRates: (rates) => {
+        set({ rates, lastUpdated: new Date().toISOString() });
+      },
+
+      convertPrice: (amountUSD: number) => {
+        const { activeCurrency, rates } = get();
+        return convertFromUSD(amountUSD, activeCurrency, rates);
+      },
+
+      formatPrice: (amountUSD: number, locale: 'ar' | 'en' = 'ar') => {
+        const { activeCurrency, rates } = get();
+        const converted = convertFromUSD(amountUSD, activeCurrency, rates);
+        return formatCurrency(converted, activeCurrency, locale);
+      },
+    }),
+    {
+      name: 'codora_currency_rates_v3',
     }
-  },
-
-  setCurrency: (currency: CurrencyCode) => {
-    set({ activeCurrency: currency });
-  },
-
-  updateRates: async (newRates: Partial<ExchangeRatesMap>) => {
-    const currentRates = get().rates;
-    const mergedRates: ExchangeRatesMap = {
-      ...currentRates,
-      ...newRates,
-    };
-
-    // 1. Direct Supabase Query first
-    const res = await upsertExchangeRatesToSupabase(mergedRates);
-    if (!res.success) {
-      return { success: false, error: res.error || 'فشل في حفظ أسعار الصرف في السحابة' };
-    }
-
-    // 2. Update local UI state ONLY after DB confirmation
-    set({
-      rates: mergedRates,
-      lastUpdated: new Date().toISOString(),
-    });
-
-    return { success: true };
-  },
-
-  convertPrice: (amountUSD: number) => {
-    const { activeCurrency, rates } = get();
-    return convertFromUSD(amountUSD, activeCurrency, rates);
-  },
-
-  formatPrice: (amountUSD: number, locale: 'ar' | 'en' = 'ar') => {
-    const { activeCurrency, rates } = get();
-    const converted = convertFromUSD(amountUSD, activeCurrency, rates);
-    return formatCurrency(converted, activeCurrency, locale);
-  },
-}));
+  )
+);
