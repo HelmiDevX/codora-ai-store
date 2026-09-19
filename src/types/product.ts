@@ -1,5 +1,7 @@
 export type ProductCategory = 
   | 'ai-subscription'
+  | 'developer-tools'
+  | 'design-creative'
   | 'course'
   | 'credits'
   | 'bundle';
@@ -35,11 +37,14 @@ export interface Product {
   features: ProductFeature[];
   stockCount?: number;
   metadata?: {
-    platform?: 'OpenAI' | 'Anthropic' | 'Midjourney' | 'Canva' | 'Self-Hosted';
+    platform?: string;
+    brandColor?: string;
+    popularRank?: number;
     duration?: string;
     durationAr?: string;
-    level?: 'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels';
-    accessType?: 'Shared Account' | 'Private Key' | 'Invite' | 'Direct LMS';
+    level?: string;
+    accessType?: string;
+    [key: string]: any;
   };
 }
 
