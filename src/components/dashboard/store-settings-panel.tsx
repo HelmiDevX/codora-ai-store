@@ -40,21 +40,45 @@ export const StoreSettingsPanel: React.FC = () => {
   const [pin, setPin] = useState(adminPin);
 
   // Accounts
-  const [kuraimiAcc, setKuraimiAcc] = useState(paymentAccounts.kuraimi.accountNumber);
-  const [kuraimiName, setKuraimiName] = useState(paymentAccounts.kuraimi.beneficiaryName);
+  const [kuraimiAcc, setKuraimiAcc] = useState(paymentAccounts?.kuraimi?.accountNumber || '3001234567');
+  const [kuraimiName, setKuraimiName] = useState(paymentAccounts?.kuraimi?.beneficiaryName || 'متجر الذكاء الاصطناعي');
 
-  const [jeebPhone, setJeebPhone] = useState(paymentAccounts.jeeb.phoneNumber);
-  const [jeebName, setJeebName] = useState(paymentAccounts.jeeb.beneficiaryName);
+  const [jeebPhone, setJeebPhone] = useState(paymentAccounts?.jeeb?.phoneNumber || '777123456');
+  const [jeebName, setJeebName] = useState(paymentAccounts?.jeeb?.beneficiaryName || 'متجر كودورا AI');
 
-  const [qutaibiAcc, setQutaibiAcc] = useState(paymentAccounts.qutaibi.accountNumber);
-  const [qutaibiName, setQutaibiName] = useState(paymentAccounts.qutaibi.beneficiaryName);
+  const [qutaibiAcc, setQutaibiAcc] = useState(paymentAccounts?.qutaibi?.accountNumber || '12345678');
+  const [qutaibiName, setQutaibiName] = useState(paymentAccounts?.qutaibi?.beneficiaryName || 'مؤسسة كودورا للبرمجيات');
 
-  const [usdtAddr, setUsdtAddr] = useState(paymentAccounts.binance_usdt.walletAddress);
-  const [usdtNet, setUsdtNet] = useState(paymentAccounts.binance_usdt.network);
+  const [usdtAddr, setUsdtAddr] = useState(paymentAccounts?.binance_usdt?.walletAddress || 'TXYZ1234567890USDTNetwork');
+  const [usdtNet, setUsdtNet] = useState(paymentAccounts?.binance_usdt?.network || 'Tron (TRC-20)');
 
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Sync form inputs when store settings are loaded or updated from Supabase/storage
+  React.useEffect(() => {
+    setWa(whatsappNumber);
+    setTg(telegramUsername);
+    setIg(instagramUsername);
+    setPin(adminPin);
+    if (paymentAccounts?.kuraimi) {
+      setKuraimiAcc(paymentAccounts.kuraimi.accountNumber || '');
+      setKuraimiName(paymentAccounts.kuraimi.beneficiaryName || '');
+    }
+    if (paymentAccounts?.jeeb) {
+      setJeebPhone(paymentAccounts.jeeb.phoneNumber || '');
+      setJeebName(paymentAccounts.jeeb.beneficiaryName || '');
+    }
+    if (paymentAccounts?.qutaibi) {
+      setQutaibiAcc(paymentAccounts.qutaibi.accountNumber || '');
+      setQutaibiName(paymentAccounts.qutaibi.beneficiaryName || '');
+    }
+    if (paymentAccounts?.binance_usdt) {
+      setUsdtAddr(paymentAccounts.binance_usdt.walletAddress || '');
+      setUsdtNet(paymentAccounts.binance_usdt.network || 'Tron (TRC-20)');
+    }
+  }, [whatsappNumber, telegramUsername, instagramUsername, adminPin, paymentAccounts]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
