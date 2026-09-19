@@ -373,6 +373,18 @@ export default function AdminDashboardPage() {
             <StoreSettingsPanel />
           </div>
         )}
+
+        {/* Dashboard Footer */}
+        <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+          <div>
+            <span>لوحة التحكم الإدارية • متجر كودورا AI</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span>تصميم وتطوير:</span>
+            <span className="font-bold text-indigo-400">م/ حلمي أمين حسان</span>
+            <span className="font-mono text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">HelmiDevX</span>
+          </div>
+        </div>
       </main>
     </div>
   );
