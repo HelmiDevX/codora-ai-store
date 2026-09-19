@@ -82,7 +82,7 @@ export const CheckoutModal: React.FC = () => {
       nameAr: 'بنك الكريمي (Kuraimi)',
       nameEn: 'Kuraimi Bank',
       accountType: 'account',
-      accountValue: paymentAccounts?.kuraimi?.accountNumber || '3001234567',
+      accountValue: paymentAccounts?.kuraimi?.accountNumber || '3006500012',
       beneficiaryName: paymentAccounts?.kuraimi?.beneficiaryName || 'متجر الذكاء الاصطناعي',
       badge: 'اليمن',
       iconName: 'Building2',
@@ -373,7 +373,7 @@ export const CheckoutModal: React.FC = () => {
       }
 
       const url = getWhatsAppDeepLink(order, {
-        whatsappNumber: whatsappNumber || '967770000000',
+        whatsappNumber: whatsappNumber || '967778401415',
         telegramUsername: telegramUsername || 'ai_store_support',
         instagramUsername: instagramUsername || 'aistore_ye',
       });

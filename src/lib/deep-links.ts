@@ -8,9 +8,9 @@ export interface StoreContactConfig {
 }
 
 export const DEFAULT_STORE_CONTACTS: StoreContactConfig = {
-  whatsappNumber: '967770000000',
-  telegramUsername: 'AiStoreSupport',
-  instagramUsername: 'aistore.yemen',
+  whatsappNumber: '967778401415',
+  telegramUsername: 'ai_store_support',
+  instagramUsername: 'aistore_ye',
 };
 
 const PAYMENT_NAMES: Record<string, string> = {

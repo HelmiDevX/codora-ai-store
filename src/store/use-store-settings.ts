@@ -33,12 +33,12 @@ export interface StoreSettings {
 }
 
 const DEFAULT_SETTINGS: StoreSettings = {
-  whatsappNumber: '967770000000',
+  whatsappNumber: '967778401415',
   telegramUsername: 'ai_store_support',
   instagramUsername: 'aistore_ye',
   paymentAccounts: {
     kuraimi: {
-      accountNumber: '3001234567',
+      accountNumber: '3006500012',
       beneficiaryName: 'متجر الذكاء الاصطناعي',
     },
     jeeb: {

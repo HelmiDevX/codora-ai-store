@@ -290,13 +290,13 @@ export async function fetchStoreSettingsFromSupabase(): Promise<StoreSettings | 
     }
 
     return {
-      whatsappNumber: data.whatsapp_number || '967770000000',
+      whatsappNumber: data.whatsapp_number || '967778401415',
       telegramUsername: data.telegram_username || 'ai_store_support',
       instagramUsername: data.instagram_username || 'aistore_ye',
       adminPin: data.admin_pin || '2026',
       paymentAccounts: {
         kuraimi: {
-          accountNumber: data.kuraimi_acc || '3001234567',
+          accountNumber: data.kuraimi_acc || '3006500012',
           beneficiaryName: data.kuraimi_name || 'متجر الذكاء الاصطناعي',
         },
         jeeb: {
