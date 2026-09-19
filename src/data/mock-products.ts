@@ -1,11 +1,12 @@
 import { Product, CategoryFilterOption } from '@/types/product';
 
 export const CATEGORY_FILTERS: CategoryFilterOption[] = [
-  { id: 'all', label: 'All', labelAr: 'الكل', iconName: 'Sparkles' },
-  { id: 'ai-subscription', label: 'AI Subscriptions', labelAr: 'اشتراكات الذكاء الاصطناعي', iconName: 'Bot' },
-  { id: 'developer-tools', label: 'Developer Tools', labelAr: 'أدوات المطورين والبرمجة', iconName: 'Code' },
-  { id: 'design-creative', label: 'Design & Creative', labelAr: 'التصميم والميديا', iconName: 'Palette' },
-  { id: 'course', label: 'Courses & Masterclasses', labelAr: 'الكورسات التعليمية', iconName: 'GraduationCap' },
+  { id: 'all', label: 'All Subscriptions', labelAr: 'جميع الاشتراكات', iconName: 'Sparkles' },
+  { id: 'ai-subscription', label: 'AI Subscriptions', labelAr: 'الذكاء الاصطناعي (LLMs)', iconName: 'Bot' },
+  { id: 'developer-tools', label: 'Developer Tools', labelAr: 'البرمجة وأدوات المطورين', iconName: 'Code' },
+  { id: 'design-creative', label: 'Design & Media', labelAr: 'التصميم وصناعة المحتوى', iconName: 'Palette' },
+  { id: 'bundle', label: 'VIP Super Bundles', labelAr: 'باقات الـ VIP التوفيرية', iconName: 'Layers' },
+  { id: 'course', label: 'Courses & Guides', labelAr: 'الحقائب والكورسات التعليمية', iconName: 'GraduationCap' },
 ];
 
 export const MOCK_PRODUCTS: Product[] = [
@@ -84,7 +85,7 @@ export const MOCK_PRODUCTS: Product[] = [
     shortDescriptionAr: 'محرر الأكواد الأفضل للمطورين مع إكمال تلقائي فائق السرعة، تعديل المشاريع كاملة، ودمج Claude 3.5.',
     fullDescription: 'Supercharge your development workflow with Cursor Pro. Unlimited fast requests and full codebase indexing.',
     fullDescriptionAr: 'ضاعف سرعتك البرمجية 10 أضعاف مع محرر Cursor Pro المبني على VS Code، مع وصول غير محدود لنماذج الذكاء الاصطناعي.',
-    category: 'ai-subscription',
+    category: 'developer-tools',
     tier: 'monthly',
     priceUSD: 20.00,
     badgeText: 'جديد ومميز',
@@ -117,7 +118,7 @@ export const MOCK_PRODUCTS: Product[] = [
     shortDescriptionAr: '15 ساعة توليد سريعة GPU مع توليد غير محدود بالوضع العادي وحقوق الاستخدام التجاري الكاملة.',
     fullDescription: 'Create award-winning photorealistic imagery with Midjourney v6.1 directly via Discord and official web interface.',
     fullDescriptionAr: 'المنصة العالمية الأولى في توليد الصور والتصاميم السينمائية والفوتوغرافية بدقة مذهلة لا تُضاهى.',
-    category: 'ai-subscription',
+    category: 'design-creative',
     tier: 'monthly',
     priceUSD: 30.00,
     badgeText: 'للمصممين',
@@ -150,7 +151,7 @@ export const MOCK_PRODUCTS: Product[] = [
     shortDescriptionAr: 'تفعيل رسمي على بريدك الشخصي لمدة سنة كاملة مع كافة القوالب والخطوط العربية وأدوات الذكاء الاصطناعي.',
     fullDescription: 'Official Canva Pro invitation to your personal account. Enjoy endless templates, font kits, and AI tools for 1 full year.',
     fullDescriptionAr: 'انضم ببريدك الإلكتروني واستمتع بمكتبة غير محدودة للصور والخطوط العربية، أدوات Magic Studio، ومزيل الخلفيات التلقائي.',
-    category: 'ai-subscription',
+    category: 'design-creative',
     tier: 'annual',
     priceUSD: 14.00,
     badgeText: 'توفير 80%',
@@ -183,7 +184,7 @@ export const MOCK_PRODUCTS: Product[] = [
     shortDescriptionAr: 'الباقة الأكثر توفيراً لمهندسي البرمجيات: شات جي بي تي بلس + كلود برو + كورسر برو معاً بتخفيض خاص.',
     fullDescription: 'Get the 3 holy grail AI tools for software engineering in a single discounted package.',
     fullDescriptionAr: 'احصل على أقوى 3 أدوات ذكاء اصطناعي للبرمجة وتطوير البرمجيات في باقة واحدة متكاملة مع دعم فني مخصص.',
-    category: 'ai-subscription',
+    category: 'bundle',
     tier: 'monthly',
     priceUSD: 52.00,
     badgeText: 'أقوى توفير',
@@ -241,3 +242,4 @@ export const MOCK_PRODUCTS: Product[] = [
     },
   },
 ];
+
