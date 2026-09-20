@@ -8,6 +8,7 @@ import { useProductsStore } from '@/store/use-products-store';
 import { useCurrencyStore } from '@/store/use-currency-store';
 import { useStoreSettings } from '@/store/use-store-settings';
 import { useCheckoutStore } from '@/store/use-checkout-store';
+import { soundManager } from '@/lib/audio';
 import { 
   ShieldCheck, 
   Zap, 
@@ -24,14 +25,22 @@ import {
   Flame,
   Check,
   X,
-  Sparkles
+  Sparkles,
+  Copy,
+  Building2,
+  ArrowUp,
+  CreditCard,
+  CircleDollarSign,
+  Landmark,
+  BadgeCheck,
+  Cpu
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const FAQS = [
   {
     q: 'كيف يتم تسليم وتفعيل الحساب بعد الدفع؟',
-    a: 'يتم تسليم الحساب فور إتمام التحويل ومراجعة الإشعار. تصلك بيانات تسجيل الدخول أو دعوة رسمية على بريدك الإلكتروني مع تعليمات الاستخدام.',
+    a: 'يتم تسليم الحساب فور إتمام التحويل ومراجعة الإشعار. تصلك بيانات تسجيل الدخول أو دعوة رسمية على بريدك الإلكتروني مع تعليمات الاستخدام الكاملة.',
   },
   {
     q: 'هل الاشتراكات والحسابات رسمية ومضمونة؟',
@@ -43,38 +52,11 @@ const FAQS = [
   },
   {
     q: 'هل أحتاج إلى بطاقة بنكية دولية للشراء؟',
-    a: 'لا، يمكنك الدفع عبر حسابك البنكي المحلي أو محفظتك الإلكترونية دون الحاجة لبطاقات ائتمان أجنبية.',
+    a: 'لا، يمكنك الدفع عبر حسابك البنكي المحلي أو محفظتك الإلكترونية دون الحاجة لبطاقات ائتمان أجنبية ورسوم تحويل دولية.',
   },
   {
     q: 'كيف يتم التعامل مع الدعم الفني في حال وجود استفسار؟',
     a: 'فريق الدعم متواجد عبر الواتساب والتيليجرام للرد على استفساراتكم ومساعدتكم طوال فترة الاشتراك.',
-  },
-];
-
-const TESTIMONIALS = [
-  {
-    name: 'م/ عبد الرحمن السقاف',
-    role: 'Full-Stack Developer',
-    location: 'صنعاء',
-    comment: 'خدمة ممتازة وموثوقة. اشتراك Claude 3.5 Sonnet و Cursor Pro تم تسليمهما بسرعة ويعملان بكفاءة تامة.',
-    stars: 5,
-    date: 'مؤكد',
-  },
-  {
-    name: 'سارة باوزير',
-    role: 'Graphic Designer',
-    location: 'عدن',
-    comment: 'اشتراك كانفا برو تفعل على إيميلي الشخصي بدون أي مشاكل، والتعامل محترم وسريع.',
-    stars: 5,
-    date: 'مؤكد',
-  },
-  {
-    name: 'م/ وليد الشميري',
-    role: 'Software Engineer',
-    location: 'تعز',
-    comment: 'توفير الدفع عبر بنك الكريمي ومحفظة جيب سهل علينا الحصول على أدوات الذكاء الاصطناعي كمهندسين.',
-    stars: 5,
-    date: 'مؤكد',
   },
 ];
 
@@ -83,16 +65,26 @@ export default function StorefrontPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'popular' | 'price-low' | 'price-high'>('popular');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+  const [copiedBankKey, setCopiedBankKey] = useState<string | null>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [activeCompareTool, setActiveCompareTool] = useState<'chatgpt' | 'claude' | 'cursor'>('chatgpt');
 
   const { products, isLoading, isSyncedWithSupabase, fetchInitialData: fetchProducts } = useProductsStore();
-  const { fetchInitialData: fetchCurrency } = useCurrencyStore();
-  const { fetchInitialData: fetchSettings, whatsappNumber } = useStoreSettings();
+  const { fetchInitialData: fetchCurrency, activeCurrency, formatPrice } = useCurrencyStore();
+  const { fetchInitialData: fetchSettings, whatsappNumber, paymentAccounts } = useStoreSettings();
+  const { openCheckout } = useCheckoutStore();
 
   // Fresh data hydration on mount
   useEffect(() => {
     fetchProducts();
     fetchCurrency();
     fetchSettings();
+
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, [fetchProducts, fetchCurrency, fetchSettings]);
 
   // Dynamic Filtering & Sorting
@@ -143,20 +135,37 @@ export default function StorefrontPage() {
   const cleanWhatsapp = (whatsappNumber || '967778401415').replace(/[^0-9]/g, '');
 
   const scrollToCatalog = () => {
+    soundManager.playSoftTap();
     const el = document.getElementById('catalog-section');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
+  const scrollToTop = () => {
+    soundManager.playSoftTap();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCopy = (text: string, key: string) => {
+    try {
+      navigator.clipboard.writeText(text);
+      setCopiedBankKey(key);
+      soundManager.playNotificationPing();
+      setTimeout(() => setCopiedBankKey(null), 2500);
+    } catch (err) {
+      console.warn('Clipboard copy error', err);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-10 space-y-16 sm:space-y-24 w-full overflow-x-hidden">
-      {/* 1. Hero Section: Clean & Authoritative */}
+      {/* 1. Hero Section: Clean, Authoritative, & Interactive */}
       <section className="relative text-center space-y-6 sm:space-y-8 max-w-4xl mx-auto pt-4 sm:pt-8 px-2">
         {/* Trust Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-950/60 border border-indigo-500/30 text-indigo-200 text-xs font-semibold backdrop-blur-xl shadow-lg shadow-indigo-500/10">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-950/60 border border-indigo-500/30 text-indigo-200 text-xs font-semibold backdrop-blur-xl shadow-lg shadow-indigo-500/10 animate-in fade-in duration-500">
           <ShieldCheck className="h-4 w-4 text-emerald-400 flex-shrink-0" />
-          <span>اشتراكات رسمية وضمان شامل • دفع محلي عبر بنك الكريمي والمحافظ الإلكترونية</span>
+          <span>اشتراكات رسمية وضمان شامل • دفع محلي ميسر عبر بنك الكريمي والمحافظ</span>
         </div>
 
         {/* Impactful Headline */}
@@ -190,6 +199,7 @@ export default function StorefrontPage() {
             href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('مرحباً كودورا، أود الاستفسار عن الاشتراكات المتوفرة.')}`}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => soundManager.playSoftTap()}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-slate-200 hover:text-white font-semibold text-sm transition-all active:scale-95 shadow-md"
           >
             <MessageCircle className="h-4 w-4 text-emerald-400" />
@@ -202,7 +212,7 @@ export default function StorefrontPage() {
           <div className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-md">
             <Zap className="h-5 w-5 text-amber-400 mb-1.5" />
             <span className="font-bold text-xs text-white">تسليم سريع وموثوق</span>
-            <span className="text-[10px] text-slate-400 mt-0.5">بعد تأكيد الدفع</span>
+            <span className="text-[10px] text-slate-400 mt-0.5">بعد تأكيد التحويل</span>
           </div>
 
           <div className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-md">
@@ -225,7 +235,38 @@ export default function StorefrontPage() {
         </div>
       </section>
 
-      {/* 2. Best-Seller Spotlight Section */}
+      {/* 2. REAL Dynamic Store Highlights Bar (100% Real Data) */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 max-w-5xl mx-auto">
+        <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/70 border border-slate-800/80 text-center space-y-1 backdrop-blur-md">
+          <div className="text-xl sm:text-2xl font-black text-indigo-400 font-mono">
+            {products.filter(p => p.isAvailable).length} خدمات
+          </div>
+          <div className="text-xs text-slate-400 font-medium">أدوات واشتراكات نشطة</div>
+        </div>
+
+        <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/70 border border-slate-800/80 text-center space-y-1 backdrop-blur-md">
+          <div className="text-xl sm:text-2xl font-black text-emerald-400 font-mono">
+            3 عملات
+          </div>
+          <div className="text-xs text-slate-400 font-medium">YER • SAR • USD</div>
+        </div>
+
+        <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/70 border border-slate-800/80 text-center space-y-1 backdrop-blur-md">
+          <div className="text-xl sm:text-2xl font-black text-amber-400 font-mono">
+            4 قنوات
+          </div>
+          <div className="text-xs text-slate-400 font-medium">كريمي • جيب • ون كاش • USDT</div>
+        </div>
+
+        <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/70 border border-slate-800/80 text-center space-y-1 backdrop-blur-md">
+          <div className="text-xl sm:text-2xl font-black text-purple-400 font-mono">
+            100%
+          </div>
+          <div className="text-xs text-slate-400 font-medium">ضمان رسمي واستبدال</div>
+        </div>
+      </section>
+
+      {/* 3. Best-Seller Spotlight Section */}
       {spotlightProducts.length > 0 && (
         <section className="space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
@@ -251,7 +292,7 @@ export default function StorefrontPage() {
         </section>
       )}
 
-      {/* 3. Catalogue, Search & Filters Section */}
+      {/* 4. Catalogue, Search & Interactive Filters Section */}
       <section id="catalog-section" className="space-y-6 sm:space-y-8 w-full pt-4">
         {/* Search & Category Header */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
@@ -270,17 +311,30 @@ export default function StorefrontPage() {
             <div className="relative flex-1 md:w-64">
               <input
                 type="text"
-                placeholder="ابحث عن اشتراك..."
+                placeholder="ابحث عن أداة أو اشتراك..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-slate-900 border border-slate-700/80 text-white placeholder:text-slate-500 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
               />
-              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400 pointer-events-none" />
+              {searchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute left-3 top-3 text-slate-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : (
+                <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400 pointer-events-none" />
+              )}
             </div>
 
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => {
+                soundManager.playSoftTap();
+                setSortBy(e.target.value as any);
+              }}
               className="py-2.5 px-3 rounded-2xl bg-slate-900 border border-slate-700/80 text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer"
             >
               <option value="popular">الأكثر طلباً</option>
@@ -290,13 +344,15 @@ export default function StorefrontPage() {
           </div>
         </div>
 
-        {/* Category Filter Pills */}
-        <div className="w-full overflow-x-auto pb-1">
-          <CategoryFilter
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-            productCounts={productCounts}
-          />
+        {/* Live Search & Filter Count Indicator */}
+        <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+          <div className="w-full overflow-x-auto pb-1">
+            <CategoryFilter
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+              productCounts={productCounts}
+            />
+          </div>
         </div>
 
         {/* Products Grid */}
@@ -315,7 +371,163 @@ export default function StorefrontPage() {
         )}
       </section>
 
-      {/* 4. Comparison Section: Advantages */}
+      {/* 5. Interactive Payment Accounts Helper (1-Click Copy with sound & real data) */}
+      <section className="p-6 sm:p-8 rounded-3xl bg-slate-900/60 border border-slate-800 backdrop-blur-xl space-y-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-4">
+          <div>
+            <h3 className="text-base sm:text-xl font-bold text-white flex items-center gap-2">
+              <Landmark className="h-5 w-5 text-indigo-400" />
+              حسابات الدفع والتحويل المعتمدة
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              يمكنك نسخ رقم الحساب بنقرة واحدة وتأكيد التحويل عند تقديم طلبك
+            </p>
+          </div>
+          <span className="text-[11px] text-slate-400 bg-slate-950 px-3 py-1 rounded-full border border-slate-800">
+            دفع محلي ميسر
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Kuraimi */}
+          <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2 relative group">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                <Building2 className="h-4 w-4 text-indigo-400" />
+                بنك الكريمي
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">YER / SAR</span>
+            </div>
+            <div className="font-mono text-xs sm:text-sm font-bold text-emerald-400 select-all" dir="ltr">
+              {paymentAccounts?.kuraimi?.accountNumber || '3006500012'}
+            </div>
+            <div className="text-[10px] text-slate-400 truncate">
+              باسم: {paymentAccounts?.kuraimi?.beneficiaryName || 'متجر الذكاء الاصطناعي'}
+            </div>
+            <button
+              type="button"
+              onClick={() => handleCopy(paymentAccounts?.kuraimi?.accountNumber || '3006500012', 'kuraimi')}
+              className="w-full mt-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-[11px] font-semibold text-slate-300 transition-all active:scale-95"
+            >
+              {copiedBankKey === 'kuraimi' ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                  <span className="text-emerald-400">تم النسخ</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5 text-slate-400" />
+                  <span>نسخ الرقم</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Jeeb */}
+          <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2 relative group">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                <Wallet className="h-4 w-4 text-purple-400" />
+                محفظة جيب
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">YER</span>
+            </div>
+            <div className="font-mono text-xs sm:text-sm font-bold text-emerald-400 select-all" dir="ltr">
+              {paymentAccounts?.jeeb?.phoneNumber || '777123456'}
+            </div>
+            <div className="text-[10px] text-slate-400 truncate">
+              باسم: {paymentAccounts?.jeeb?.beneficiaryName || 'متجر كودورا AI'}
+            </div>
+            <button
+              type="button"
+              onClick={() => handleCopy(paymentAccounts?.jeeb?.phoneNumber || '777123456', 'jeeb')}
+              className="w-full mt-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-[11px] font-semibold text-slate-300 transition-all active:scale-95"
+            >
+              {copiedBankKey === 'jeeb' ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                  <span className="text-emerald-400">تم النسخ</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5 text-slate-400" />
+                  <span>نسخ الرقم</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Qutaibi */}
+          <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2 relative group">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                <Landmark className="h-4 w-4 text-sky-400" />
+                بنك القطيبي
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">YER</span>
+            </div>
+            <div className="font-mono text-xs sm:text-sm font-bold text-emerald-400 select-all" dir="ltr">
+              {paymentAccounts?.qutaibi?.accountNumber || '12345678'}
+            </div>
+            <div className="text-[10px] text-slate-400 truncate">
+              باسم: {paymentAccounts?.qutaibi?.beneficiaryName || 'مؤسسة كودورا للبرمجيات'}
+            </div>
+            <button
+              type="button"
+              onClick={() => handleCopy(paymentAccounts?.qutaibi?.accountNumber || '12345678', 'qutaibi')}
+              className="w-full mt-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-[11px] font-semibold text-slate-300 transition-all active:scale-95"
+            >
+              {copiedBankKey === 'qutaibi' ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                  <span className="text-emerald-400">تم النسخ</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5 text-slate-400" />
+                  <span>نسخ الرقم</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* USDT */}
+          <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2 relative group">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                <CircleDollarSign className="h-4 w-4 text-emerald-400" />
+                بايننس USDT
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">TRC-20</span>
+            </div>
+            <div className="font-mono text-[11px] font-bold text-emerald-400 select-all truncate" dir="ltr">
+              {paymentAccounts?.binance_usdt?.walletAddress || 'TXYZ1234567890USDTNetwork'}
+            </div>
+            <div className="text-[10px] text-slate-400 truncate">
+              شبكة: {paymentAccounts?.binance_usdt?.network || 'Tron (TRC-20)'}
+            </div>
+            <button
+              type="button"
+              onClick={() => handleCopy(paymentAccounts?.binance_usdt?.walletAddress || 'TXYZ1234567890USDTNetwork', 'usdt')}
+              className="w-full mt-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-[11px] font-semibold text-slate-300 transition-all active:scale-95"
+            >
+              {copiedBankKey === 'usdt' ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                  <span className="text-emerald-400">تم النسخ</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5 text-slate-400" />
+                  <span>نسخ العنوان</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. Comparison Section: Advantages */}
       <section className="p-6 sm:p-10 rounded-3xl bg-slate-900/60 border border-slate-800 backdrop-blur-xl space-y-8">
         <div className="text-center space-y-2 max-w-2xl mx-auto">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/25 text-indigo-300 text-xs font-bold">
@@ -395,7 +607,7 @@ export default function StorefrontPage() {
         </div>
       </section>
 
-      {/* 5. How It Works (4 Steps) */}
+      {/* 7. How It Works (4 Steps) */}
       <section className="p-6 sm:p-10 rounded-3xl bg-slate-900/60 border border-slate-800 backdrop-blur-xl space-y-8">
         <div className="text-center space-y-2 max-w-xl mx-auto">
           <h3 className="text-xl sm:text-3xl font-black text-white">
@@ -449,50 +661,7 @@ export default function StorefrontPage() {
         </div>
       </section>
 
-      {/* 6. Customer Testimonials */}
-      <section className="space-y-6">
-        <div className="text-center space-y-2 max-w-xl mx-auto">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/25 text-indigo-300 text-xs font-bold">
-            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-            <span>آراء وتجارب العملاء</span>
-          </div>
-          <h3 className="text-xl sm:text-3xl font-black text-white">
-            تجارب مطورين ومصممين مع خدماتنا
-          </h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {TESTIMONIALS.map((review, i) => (
-            <div key={i} className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800 backdrop-blur-xl flex flex-col justify-between space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-center gap-1">
-                  {[...Array(review.stars)].map((_, s) => (
-                    <Star key={s} className="h-4 w-4 fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed italic">
-                  &quot;{review.comment}&quot;
-                </p>
-              </div>
-
-              <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs">
-                <div>
-                  <div className="font-bold text-white flex items-center gap-1.5">
-                    <span>{review.name}</span>
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                  </div>
-                  <div className="text-[11px] text-slate-400">{review.role}</div>
-                </div>
-                <span className="text-[10px] text-indigo-400 bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-500/20 font-mono">
-                  {review.location}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* 7. FAQ Accordion Section */}
+      {/* 8. FAQ Accordion Section */}
       <section className="p-6 sm:p-10 rounded-3xl bg-slate-900/60 border border-slate-800 backdrop-blur-xl space-y-6">
         <div className="text-center space-y-2 max-w-xl mx-auto">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/25 text-purple-300 text-xs font-bold">
@@ -514,7 +683,10 @@ export default function StorefrontPage() {
               >
                 <button
                   type="button"
-                  onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
+                  onClick={() => {
+                    soundManager.playSoftTap();
+                    setOpenFaqIndex(isOpen ? null : idx);
+                  }}
                   className="w-full p-4 sm:p-5 text-right flex items-center justify-between gap-3 text-xs sm:text-sm font-bold text-white hover:text-indigo-300 transition-colors"
                 >
                   <span>{faq.q}</span>
@@ -532,7 +704,7 @@ export default function StorefrontPage() {
         </div>
       </section>
 
-      {/* 8. Help / Inquiries Banner */}
+      {/* 9. Help / Inquiries Banner */}
       <section className="p-6 sm:p-10 rounded-3xl bg-slate-900 border border-slate-800 backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl">
         <div className="space-y-2 text-center sm:text-right">
           <h4 className="text-lg sm:text-2xl font-black text-white">
@@ -547,13 +719,27 @@ export default function StorefrontPage() {
           href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('مرحباً كودورا، أود الاستفسار عن الاشتراكات المتوفرة.')}`}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => soundManager.playSoftTap()}
           className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-emerald-600/20 active:scale-95 transition-all flex-shrink-0"
         >
           <MessageCircle className="h-4 w-4" />
           <span>تواصل عبر واتساب</span>
         </a>
       </section>
+
+      {/* Floating Scroll to Top Button */}
+      {showScrollTop && (
+        <button
+          type="button"
+          onClick={scrollToTop}
+          className="fixed bottom-6 left-6 z-50 p-3 rounded-2xl bg-indigo-600/90 hover:bg-indigo-500 text-white shadow-xl shadow-indigo-500/25 border border-indigo-400/30 backdrop-blur-md transition-all active:scale-90 animate-in fade-in slide-in-from-bottom-4 duration-300"
+          title="العودة لأعلى الصفحة"
+        >
+          <ArrowUp className="h-5 w-5" />
+        </button>
+      )}
     </div>
   );
 }
+
 

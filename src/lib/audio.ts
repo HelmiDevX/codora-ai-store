@@ -208,6 +208,37 @@ class SoundAlertManager {
     osc.start(now);
     osc.stop(now + 0.2);
   }
+
+  /**
+   * Ultra-soft subtle UI tap/pop sound
+   */
+  public playSoftTap(): void {
+    if (!this.soundEnabled) return;
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.04);
+
+      gain.gain.setValueAtTime(0.06, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.06);
+    } catch {
+      // AudioContext fallback
+    }
+  }
 }
 
 export const soundManager = new SoundAlertManager();
+

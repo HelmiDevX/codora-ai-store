@@ -5,6 +5,7 @@ import { ProductCategory } from '@/types/product';
 import { CATEGORY_FILTERS } from '@/data/mock-products';
 import { Sparkles, Bot, Code, Palette, GraduationCap, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { soundManager } from '@/lib/audio';
 
 interface CategoryFilterProps {
   selectedCategory: ProductCategory | 'all';
@@ -26,8 +27,13 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
   onSelectCategory,
   productCounts = {},
 }) => {
+  const handleCategoryClick = (catId: ProductCategory | 'all') => {
+    soundManager.playSoftTap();
+    onSelectCategory(catId);
+  };
+
   return (
-    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none w-full">
+    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none w-full select-none">
       {CATEGORY_FILTERS.map((cat) => {
         const isSelected = selectedCategory === cat.id;
         const Icon = cat.iconName ? ICONS[cat.iconName] || Sparkles : Sparkles;
@@ -37,9 +43,9 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
           <button
             key={cat.id}
             type="button"
-            onClick={() => onSelectCategory(cat.id)}
+            onClick={() => handleCategoryClick(cat.id)}
             className={cn(
-              'group relative flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-300 border flex-shrink-0 active:scale-95 select-none',
+              'group relative flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-300 border flex-shrink-0 active:scale-95 cursor-pointer',
               isSelected
                 ? 'bg-gradient-to-r from-indigo-600/30 via-purple-600/20 to-indigo-600/30 text-white border-indigo-500 shadow-lg shadow-indigo-500/15 ring-1 ring-indigo-500/50'
                 : 'bg-slate-900/70 text-slate-400 border-slate-800/90 hover:text-slate-100 hover:border-slate-700 hover:bg-slate-850'
@@ -70,4 +76,5 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
     </div>
   );
 };
+
 
